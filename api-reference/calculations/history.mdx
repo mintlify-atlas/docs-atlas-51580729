@@ -1,0 +1,203 @@
+---
+title: 'Calculation History'
+api: 'GET /api/calculations/history'
+description: 'Retrieve the user calculation history'
+---
+
+## Overview
+
+Retrieves the calculation history for the authenticated user. Returns both power loss and minimum power calculations with pagination support.
+
+<Info>
+  This endpoint only returns calculations performed by the authenticated user.
+</Info>
+
+## Authentication
+
+**Required:** Bearer token in Authorization header
+
+```bash
+Authorization: Bearer <your_jwt_token>
+```
+
+## Query Parameters
+
+<ParamField query="page" type="integer" default="1">
+  Page number for pagination
+</ParamField>
+
+<ParamField query="limit" type="integer" default="10">
+  Number of results per page (max 100)
+</ParamField>
+
+<ParamField query="type" type="string">
+  Filter by calculation type: `power_loss` or `minimum_power`
+</ParamField>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="array">
+  Array of calculation records
+  
+  <Expandable title="Calculation object properties">
+    <ResponseField name="query_id" type="integer">
+      Unique calculation identifier
+    </ResponseField>
+    
+    <ResponseField name="query_type" type="string">
+      Type of calculation: "power_loss" or "minimum_power"
+    </ResponseField>
+    
+    <ResponseField name="query_date" type="string">
+      ISO 8601 timestamp of when the calculation was performed
+    </ResponseField>
+    
+    <ResponseField name="status" type="string">
+      Calculation status
+    </ResponseField>
+    
+    <ResponseField name="tractor_name" type="string">
+      Name of the tractor used (for power_loss calculations)
+    </ResponseField>
+    
+    <ResponseField name="terrain_name" type="string">
+      Name of the terrain
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="pagination" type="object">
+  Pagination metadata
+  
+  <Expandable title="Pagination properties">
+    <ResponseField name="currentPage" type="integer">
+      Current page number
+    </ResponseField>
+    
+    <ResponseField name="totalPages" type="integer">
+      Total number of pages
+    </ResponseField>
+    
+    <ResponseField name="totalItems" type="integer">
+      Total number of calculations
+    </ResponseField>
+    
+    <ResponseField name="itemsPerPage" type="integer">
+      Number of items per page
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Examples
+
+<CodeGroup>
+```bash Get All History
+curl -X GET "http://localhost:4000/api/calculations/history?page=1&limit=10" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -H "Content-Type: application/json"
+```
+
+```bash Filter by Type
+curl -X GET "http://localhost:4000/api/calculations/history?type=power_loss" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -H "Content-Type: application/json"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'http://localhost:4000/api/calculations/history?page=1&limit=10',
+  {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  }
+);
+
+const data = await response.json();
+console.log(`Total calculations: ${data.pagination.totalItems}`);
+```
+
+```python Python
+import requests
+
+token = "your_jwt_token_here"
+
+response = requests.get(
+    'http://localhost:4000/api/calculations/history',
+    headers={
+        'Authorization': f'Bearer {token}',
+        'Content-Type': 'application/json'
+    },
+    params={
+        'page': 1,
+        'limit': 10,
+        'type': 'power_loss'
+    }
+)
+
+data = response.json()
+for calc in data['data']:
+    print(f"{calc['query_type']}: {calc['terrain_name']} on {calc['query_date']}")
+```
+</CodeGroup>
+
+## Response Example (200 OK)
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "query_id": 42,
+      "query_type": "power_loss",
+      "query_date": "2026-03-10T15:30:00.000Z",
+      "status": "completed",
+      "tractor_name": "John Deere 6130M",
+      "terrain_name": "Highland Farm North"
+    },
+    {
+      "query_id": 41,
+      "query_type": "minimum_power",
+      "query_date": "2026-03-09T10:15:00.000Z",
+      "status": "completed",
+      "tractor_name": null,
+      "terrain_name": "Valley Field 3"
+    }
+  ],
+  "pagination": {
+    "currentPage": 1,
+    "totalPages": 5,
+    "totalItems": 47,
+    "itemsPerPage": 10
+  }
+}
+```
+
+## Error Responses
+
+| Status Code | Description |
+|-------------|-------------|
+| **401** | Missing or invalid authentication token |
+| **500** | Internal server error |
+
+## Related Endpoints
+
+<CardGroup cols={2}>
+  <Card title="Power Loss Calculation" icon="bolt" href="/api-reference/calculations/power-loss">
+    Calculate power losses
+  </Card>
+  <Card title="Minimum Power Calculation" icon="calculator" href="/api-reference/calculations/minimum-power">
+    Calculate minimum power requirements
+  </Card>
+</CardGroup>
+
+## Source Code Reference
+
+- Route: `src/routes/calculation.routes.js:256`
+- Controller: `src/controllers/calculationController.js:getCalculationHistory`

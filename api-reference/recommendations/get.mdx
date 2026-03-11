@@ -1,0 +1,232 @@
+---
+title: 'Get Recommendation'
+api: 'GET /api/recommendations/:id'
+description: 'Retrieve detailed recommendation by ID'
+---
+
+## Overview
+
+Retrieves complete details of a specific recommendation including user, terrain, tractor, implement data, compatibility score, and detailed observations.
+
+<Info>
+  Users can only access their own recommendations.
+</Info>
+
+## Authentication
+
+**Required:** Bearer token in Authorization header
+
+```bash
+Authorization: Bearer <your_jwt_token>
+```
+
+## Path Parameters
+
+<ParamField path="id" type="integer" required>
+  The unique identifier of the recommendation
+</ParamField>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  Complete recommendation details
+  
+  <Expandable title="Recommendation properties">
+    <ResponseField name="recommendation_id" type="integer">
+      Unique recommendation identifier
+    </ResponseField>
+    
+    <ResponseField name="user_id" type="integer">
+      ID of the user who requested the recommendation
+    </ResponseField>
+    
+    <ResponseField name="user_name" type="string">
+      Name of the user
+    </ResponseField>
+    
+    <ResponseField name="email" type="string">
+      User's email address
+    </ResponseField>
+    
+    <ResponseField name="terrain_name" type="string">
+      Name of the terrain
+    </ResponseField>
+    
+    <ResponseField name="soil_type" type="string">
+      Type of soil
+    </ResponseField>
+    
+    <ResponseField name="slope_percentage" type="number">
+      Terrain slope percentage
+    </ResponseField>
+    
+    <ResponseField name="tractor_name" type="string">
+      Name of the recommended tractor
+    </ResponseField>
+    
+    <ResponseField name="tractor_brand" type="string">
+      Brand of the tractor
+    </ResponseField>
+    
+    <ResponseField name="tractor_model" type="string">
+      Model of the tractor
+    </ResponseField>
+    
+    <ResponseField name="engine_power_hp" type="number">
+      Engine power in horsepower
+    </ResponseField>
+    
+    <ResponseField name="implement_name" type="string">
+      Name of the implement
+    </ResponseField>
+    
+    <ResponseField name="implement_type" type="string">
+      Type of implement
+    </ResponseField>
+    
+    <ResponseField name="power_requirement_hp" type="number">
+      Power requirement in horsepower
+    </ResponseField>
+    
+    <ResponseField name="compatibility_score" type="number">
+      Overall compatibility score (0-100)
+    </ResponseField>
+    
+    <ResponseField name="observations" type="string">
+      JSON string containing detailed ranking, score breakdown, and explanation
+    </ResponseField>
+    
+    <ResponseField name="work_type" type="string">
+      Type of agricultural work
+    </ResponseField>
+    
+    <ResponseField name="recommendation_date" type="string">
+      ISO 8601 timestamp of when the recommendation was generated
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Examples
+
+<CodeGroup>
+```bash cURL
+curl -X GET "http://localhost:4000/api/recommendations/15" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -H "Content-Type: application/json"
+```
+
+```javascript JavaScript
+const recommendationId = 15;
+
+const response = await fetch(
+  `http://localhost:4000/api/recommendations/${recommendationId}`,
+  {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  }
+);
+
+const data = await response.json();
+const observations = JSON.parse(data.data.observations);
+console.log(`Rank: ${observations.rank}, Score: ${data.data.compatibility_score}`);
+```
+
+```python Python
+import requests
+import json
+
+token = "your_jwt_token_here"
+recommendation_id = 15
+
+response = requests.get(
+    f'http://localhost:4000/api/recommendations/{recommendation_id}',
+    headers={
+        'Authorization': f'Bearer {token}',
+        'Content-Type': 'application/json'
+    }
+)
+
+data = response.json()['data']
+observations = json.loads(data['observations'])
+print(f"Tractor: {data['tractor_name']}")
+print(f"Score: {data['compatibility_score']}/100")
+print(f"Explanation: {observations['explanation']}")
+```
+</CodeGroup>
+
+## Response Example (200 OK)
+
+```json
+{
+  "success": true,
+  "data": {
+    "recommendation_id": 15,
+    "user_id": 3,
+    "user_name": "Juan Pérez",
+    "email": "juan@example.com",
+    "terrain_name": "Highland Farm North",
+    "soil_type": "Clay",
+    "slope_percentage": 18.5,
+    "tractor_name": "New Holland T6.175",
+    "tractor_brand": "New Holland",
+    "tractor_model": "T6.175",
+    "engine_power_hp": 175,
+    "implement_name": "3-body disc plow",
+    "implement_type": "plow",
+    "power_requirement_hp": 120,
+    "compatibility_score": 87.5,
+    "observations": "{\"rank\":1,\"scores\":{\"efficiency\":28,\"traction\":25,\"soil\":18,\"economic\":10,\"availability\":10},\"explanation\":\"Optimal match for steep terrain with clay soil. 4x4 traction provides safety. Power utilization at 89.5%\"}",
+    "work_type": "tillage",
+    "recommendation_date": "2026-03-10T15:30:00.000Z"
+  }
+}
+```
+
+## Error Responses
+
+| Status Code | Description |
+|-------------|-------------|
+| **401** | Missing or invalid authentication token |
+| **404** | Recommendation not found or doesn't belong to user |
+| **500** | Internal server error |
+
+## Observations Field
+
+The `observations` field contains a JSON string with detailed scoring information:
+
+```json
+{
+  "rank": 1,
+  "scores": {
+    "efficiency": 28,
+    "traction": 25,
+    "soil": 18,
+    "economic": 10,
+    "availability": 10
+  },
+  "explanation": "Detailed reasoning for the recommendation"
+}
+```
+
+## Related Endpoints
+
+<CardGroup cols={2}>
+  <Card title="Generate Recommendation" icon="stars" href="/api-reference/recommendations/generate">
+    Generate new tractor recommendations
+  </Card>
+  <Card title="Recommendation History" icon="clock-rotate-left" href="/api-reference/recommendations/history">
+    View all recommendations
+  </Card>
+</CardGroup>
+
+## Source Code Reference
+
+- Route: `src/routes/recommendation.routes.js:312`
+- Controller: `src/controllers/recommendationController.js:getRecommendationById`

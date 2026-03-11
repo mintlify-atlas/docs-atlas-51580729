@@ -1,0 +1,145 @@
+---
+title: 'Logout'
+api: 'POST /api/auth/logout'
+description: 'End the user session'
+---
+
+## Overview
+
+Closes the session for the authenticated user. Since JWT tokens are stateless, this endpoint primarily serves as a confirmation point. The client must discard the token after receiving the response.
+
+<Note>
+  The token must be manually removed from client storage (localStorage, cookies, etc.) as JWT tokens cannot be invalidated server-side.
+</Note>
+
+## Authentication
+
+**Required:** Bearer token in Authorization header
+
+```bash
+Authorization: Bearer <your_jwt_token>
+```
+
+## Request Body
+
+No request body required.
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Indicates if the logout was successful
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Confirmation message
+</ResponseField>
+
+<ResponseField name="data" type="null">
+  Always null for logout responses
+</ResponseField>
+
+## Examples
+
+<CodeGroup>
+```bash cURL
+curl -X POST "http://localhost:4000/api/auth/logout" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -H "Content-Type: application/json"
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:4000/api/auth/logout', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  }
+});
+
+const data = await response.json();
+console.log(data.message); // "Sesión cerrada exitosamente"
+
+// Remove token from storage
+localStorage.removeItem('authToken');
+```
+
+```python Python
+import requests
+
+token = "your_jwt_token_here"
+
+response = requests.post(
+    'http://localhost:4000/api/auth/logout',
+    headers={
+        'Authorization': f'Bearer {token}',
+        'Content-Type': 'application/json'
+    }
+)
+
+print(response.json())
+```
+</CodeGroup>
+
+## Response Examples
+
+### Success (200 OK)
+
+```json
+{
+  "success": true,
+  "message": "Sesión cerrada exitosamente",
+  "data": null
+}
+```
+
+### Unauthorized (401)
+
+```json
+{
+  "success": false,
+  "message": "Token no proporcionado o inválido"
+}
+```
+
+## Error Responses
+
+| Status Code | Description |
+|-------------|-------------|
+| **401** | Missing or invalid token |
+| **500** | Internal server error |
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Client-Side Token Management">
+    After a successful logout:
+    1. Remove the token from storage (localStorage, sessionStorage, cookies)
+    2. Clear any cached user data
+    3. Redirect to the login page
+    4. Update application state to reflect logged-out status
+  </Accordion>
+  
+  <Accordion title="Automatic Logout">
+    Consider implementing automatic logout in these scenarios:
+    - Token expiration (24 hours by default)
+    - Inactivity timeout
+    - Multiple failed API requests with 401 status
+    - User account status changes to inactive
+  </Accordion>
+</AccordionGroup>
+
+## Related Endpoints
+
+<CardGroup cols={2}>
+  <Card title="Login" icon="right-to-bracket" href="/api-reference/auth/login">
+    Authenticate and receive a new token
+  </Card>
+  <Card title="Get Profile" icon="user" href="/api-reference/auth/profile">
+    Retrieve user profile information
+  </Card>
+</CardGroup>
+
+## Source Code Reference
+
+- Route: `src/routes/auth.routes.js:208`
+- Controller: `src/controllers/authController.js:logout`

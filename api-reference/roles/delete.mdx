@@ -1,0 +1,166 @@
+---
+title: 'Delete Role'
+api: 'DELETE /api/roles/:id'
+description: 'Delete a role (Admin only)'
+---
+
+## Overview
+
+Deletes a role from the system. This is a soft delete operation that sets the role status to inactive rather than permanently removing it.
+
+<Warning>
+  This endpoint requires administrator privileges (role_id: 1). Only admin users can delete roles.
+</Warning>
+
+## Authentication
+
+**Required:** Bearer token with admin privileges
+
+```bash
+Authorization: Bearer <admin_jwt_token>
+```
+
+## Path Parameters
+
+<ParamField path="id" type="integer" required>
+  The unique identifier of the role to delete
+</ParamField>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Indicates if the role was deleted successfully
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Confirmation message
+</ResponseField>
+
+<ResponseField name="data" type="null">
+  Always null for delete operations
+</ResponseField>
+
+## Examples
+
+<CodeGroup>
+```bash cURL
+curl -X DELETE "http://localhost:4000/api/roles/3" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -H "Content-Type: application/json"
+```
+
+```javascript JavaScript
+const roleId = 3;
+
+const response = await fetch(
+  `http://localhost:4000/api/roles/${roleId}`,
+  {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${adminToken}`,
+      'Content-Type': 'application/json'
+    }
+  }
+);
+
+const data = await response.json();
+console.log(data.message);
+```
+
+```python Python
+import requests
+
+admin_token = "your_admin_jwt_token_here"
+role_id = 3
+
+response = requests.delete(
+    f'http://localhost:4000/api/roles/{role_id}',
+    headers={
+        'Authorization': f'Bearer {admin_token}',
+        'Content-Type': 'application/json'
+    }
+)
+
+print(response.json())
+```
+</CodeGroup>
+
+## Response Examples
+
+### Success (200 OK)
+
+```json
+{
+  "success": true,
+  "message": "Role deleted successfully",
+  "data": null
+}
+```
+
+### Unauthorized (401)
+
+```json
+{
+  "success": false,
+  "message": "Token no proporcionado o inválido"
+}
+```
+
+### Forbidden (403)
+
+```json
+{
+  "success": false,
+  "message": "Access denied. Admin privileges required"
+}
+```
+
+### Not Found (404)
+
+```json
+{
+  "success": false,
+  "message": "Role not found"
+}
+```
+
+## Error Responses
+
+| Status Code | Description |
+|-------------|-------------|
+| **400** | Invalid role ID |
+| **401** | Missing or invalid authentication token |
+| **403** | User does not have admin privileges |
+| **404** | Role not found |
+| **500** | Internal server error |
+
+## Soft Delete Behavior
+
+<Info>
+  This endpoint performs a soft delete by setting the role status to "inactive". The role record remains in the database but is no longer active. This preserves referential integrity with users who may have this role assigned.
+</Info>
+
+## Important Notes
+
+<Warning>
+  Deleting a role that is currently assigned to users may affect their permissions. Ensure you reassign affected users to a different role before deletion.
+</Warning>
+
+## Related Endpoints
+
+<CardGroup cols={2}>
+  <Card title="List Roles" icon="list" href="/api-reference/roles/list">
+    View all roles
+  </Card>
+  <Card title="Create Role" icon="plus" href="/api-reference/roles/create">
+    Create a new role
+  </Card>
+  <Card title="Update Role" icon="pen" href="/api-reference/roles/update">
+    Modify role details
+  </Card>
+</CardGroup>
+
+## Source Code Reference
+
+- Route: `src/routes/role.routes.js:delete`
+- Controller: `src/controllers/roleController.js:deleteRole`
