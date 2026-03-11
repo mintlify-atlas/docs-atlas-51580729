@@ -1,0 +1,528 @@
+---
+title: Implements
+description: Comprehensive guide to the Implement resource in the MaqAgr API
+---
+
+Implements are agricultural equipment and attachments used with tractors for various farming operations. This resource manages the catalog of available implements with their specifications, soil compatibility, and power requirements.
+
+## Overview
+
+The Implement resource represents agricultural implements such as plows, harrows, seeders, and other farming equipment. Each implement has detailed specifications including power requirements, working dimensions, and soil type compatibility.
+
+### Key Features
+
+- Public catalog access for all implements
+- Search and filter by type, soil compatibility, and power requirements
+- Availability tracking (available, maintenance, inactive)
+- Admin-only create, update, and delete operations
+- Soft delete implementation (status changes to inactive)
+
+## Data Model
+
+The Implement model contains the following fields:
+
+<ResponseField name="implement_id" type="integer" required>
+  Unique identifier for the implement (auto-generated)
+</ResponseField>
+
+<ResponseField name="implement_name" type="string" required>
+  Name or description of the implement
+</ResponseField>
+
+<ResponseField name="brand" type="string" required>
+  Manufacturer brand (e.g., "Baldan", "Jumil")
+</ResponseField>
+
+<ResponseField name="power_requirement_hp" type="number" required>
+  Minimum tractor power required in horsepower (HP). Must be a positive number.
+</ResponseField>
+
+<ResponseField name="working_width_m" type="number" required>
+  Working width in meters. Must be a positive number.
+</ResponseField>
+
+<ResponseField name="soil_type" type="string">
+  Compatible soil type (e.g., "clay", "sandy", "loamy", "All")
+</ResponseField>
+
+<ResponseField name="working_depth_cm" type="number">
+  Working depth in centimeters. Must be a positive number if provided.
+</ResponseField>
+
+<ResponseField name="weight_kg" type="number">
+  Total weight in kilograms. Must be a positive number if provided.
+</ResponseField>
+
+<ResponseField name="implement_type" type="string" required>
+  Type of implement. Allowed values: `plow`, `harrow`, `seeder`, `sprayer`, `harvester`, `cultivator`, `mower`, `trailer`, `other`
+</ResponseField>
+
+<ResponseField name="status" type="string" default="available">
+  Current status. Allowed values: `available`, `maintenance`, `inactive`
+</ResponseField>
+
+## Common Operations
+
+### List All Implements
+
+Retrieve all implements with pagination support. This endpoint is publicly accessible.
+
+<CodeGroup>
+```javascript GET /api/implements
+const response = await fetch('https://api.maqagr.com/api/implements?limit=10&page=1', {
+  method: 'GET',
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
+const data = await response.json();
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    'https://api.maqagr.com/api/implements',
+    params={'limit': 10, 'page': 1}
+)
+
+data = response.json()
+```
+</CodeGroup>
+
+**Response Example:**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "implement_id": 1,
+      "implement_name": "Arado de discos 3 cuerpos",
+      "brand": "Baldan",
+      "power_requirement_hp": 85,
+      "working_width_m": 1.2,
+      "soil_type": "clay",
+      "working_depth_cm": 30,
+      "weight_kg": 450,
+      "implement_type": "plow",
+      "status": "available"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "total": 15,
+    "totalPages": 2
+  }
+}
+```
+
+### Get Implement by ID
+
+Retrieve a specific implement by its unique identifier.
+
+<CodeGroup>
+```javascript GET /api/implements/:id
+const response = await fetch('https://api.maqagr.com/api/implements/1', {
+  method: 'GET',
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
+const data = await response.json();
+```
+</CodeGroup>
+
+**Response Example:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "implement_id": 1,
+    "implement_name": "Arado de discos 3 cuerpos",
+    "brand": "Baldan",
+    "power_requirement_hp": 85,
+    "working_width_m": 1.2,
+    "soil_type": "clay",
+    "working_depth_cm": 30,
+    "weight_kg": 450,
+    "implement_type": "plow",
+    "status": "available"
+  }
+}
+```
+
+### Search Implements
+
+Search and filter implements by type, soil type compatibility, brand, and maximum power requirement.
+
+<CodeGroup>
+```javascript GET /api/implements/search
+const params = new URLSearchParams({
+  type: 'plow',
+  soilType: 'clay',
+  maxPower: 100,
+  brand: 'Baldan'
+});
+
+const response = await fetch(`https://api.maqagr.com/api/implements/search?${params}`, {
+  method: 'GET',
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
+const data = await response.json();
+```
+</CodeGroup>
+
+**Response Example:**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "implement_id": 1,
+      "implement_name": "Arado de discos 3 cuerpos",
+      "brand": "Baldan",
+      "power_requirement_hp": 85,
+      "soil_type": "clay",
+      "implement_type": "plow",
+      "status": "available"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "total": 3,
+    "totalPages": 1
+  },
+  "filters": {
+    "search": null,
+    "brand": "Baldan",
+    "type": "plow",
+    "soilType": "clay",
+    "maxPower": 100
+  }
+}
+```
+
+### Get Available Implements
+
+Retrieve only implements with `available` status, sorted by type and power requirement.
+
+<CodeGroup>
+```javascript GET /api/implements/available
+const response = await fetch('https://api.maqagr.com/api/implements/available', {
+  method: 'GET',
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
+const data = await response.json();
+```
+</CodeGroup>
+
+### Create Implement
+
+<Warning>
+  This operation requires administrator authentication. Include a valid JWT token with admin role.
+</Warning>
+
+Create a new implement in the catalog.
+
+<CodeGroup>
+```javascript POST /api/implements
+const response = await fetch('https://api.maqagr.com/api/implements', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer YOUR_ADMIN_TOKEN'
+  },
+  body: JSON.stringify({
+    implement_name: "Arado de discos 3 cuerpos",
+    brand: "Baldan",
+    power_requirement_hp: 85,
+    working_width_m: 1.2,
+    soil_type: "clay",
+    working_depth_cm: 30,
+    weight_kg: 450,
+    implement_type: "plow",
+    status: "available"
+  })
+});
+
+const data = await response.json();
+```
+</CodeGroup>
+
+**Response Example:**
+
+```json
+{
+  "success": true,
+  "message": "Implemento creado exitosamente",
+  "data": {
+    "implement_id": 2,
+    "implement_name": "Arado de discos 3 cuerpos",
+    "brand": "Baldan",
+    "power_requirement_hp": 85,
+    "working_width_m": 1.2,
+    "soil_type": "clay",
+    "working_depth_cm": 30,
+    "weight_kg": 450,
+    "implement_type": "plow",
+    "status": "available"
+  }
+}
+```
+
+### Update Implement
+
+<Warning>
+  This operation requires administrator authentication.
+</Warning>
+
+Update an existing implement. Only provided fields are updated (partial update using COALESCE).
+
+<CodeGroup>
+```javascript PUT /api/implements/:id
+const response = await fetch('https://api.maqagr.com/api/implements/1', {
+  method: 'PUT',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer YOUR_ADMIN_TOKEN'
+  },
+  body: JSON.stringify({
+    power_requirement_hp: 90,
+    working_depth_cm: 35
+  })
+});
+
+const data = await response.json();
+```
+</CodeGroup>
+
+**Response Example:**
+
+```json
+{
+  "success": true,
+  "message": "Implemento actualizado exitosamente",
+  "data": {
+    "implement_id": 1,
+    "implement_name": "Arado de discos 3 cuerpos",
+    "brand": "Baldan",
+    "power_requirement_hp": 90,
+    "working_width_m": 1.2,
+    "soil_type": "clay",
+    "working_depth_cm": 35,
+    "weight_kg": 450,
+    "implement_type": "plow",
+    "status": "available"
+  }
+}
+```
+
+### Delete Implement
+
+<Warning>
+  This operation requires administrator authentication.
+</Warning>
+
+<Info>
+  Implements use soft delete. The implement's status is changed to `inactive` rather than being removed from the database.
+</Info>
+
+Delete an implement from the active catalog.
+
+<CodeGroup>
+```javascript DELETE /api/implements/:id
+const response = await fetch('https://api.maqagr.com/api/implements/1', {
+  method: 'DELETE',
+  headers: {
+    'Authorization': 'Bearer YOUR_ADMIN_TOKEN'
+  }
+});
+
+const data = await response.json();
+```
+</CodeGroup>
+
+**Response Example:**
+
+```json
+{
+  "success": true,
+  "message": "Implemento eliminado exitosamente",
+  "data": {
+    "implement_id": 1,
+    "status": "inactive"
+  }
+}
+```
+
+## Implement Types
+
+The API supports the following implement types:
+
+<CardGroup cols={3}>
+  <Card title="Plow" icon="seedling">
+    Used for soil turning and preparation
+  </Card>
+  <Card title="Harrow" icon="grip-lines">
+    For soil smoothing and leveling
+  </Card>
+  <Card title="Seeder" icon="leaf">
+    Planting and seeding equipment
+  </Card>
+  <Card title="Sprayer" icon="spray-can">
+    Chemical and fertilizer application
+  </Card>
+  <Card title="Harvester" icon="wheat-awn">
+    Crop harvesting machinery
+  </Card>
+  <Card title="Cultivator" icon="trowel">
+    Soil cultivation and weed control
+  </Card>
+  <Card title="Mower" icon="scissors">
+    Grass and crop cutting
+  </Card>
+  <Card title="Trailer" icon="truck">
+    Transport and hauling
+  </Card>
+  <Card title="Other" icon="ellipsis">
+    Miscellaneous implements
+  </Card>
+</CardGroup>
+
+## Validation Rules
+
+When creating or updating implements, the following validation rules apply:
+
+### Required Fields (Create)
+
+- `implement_name`: Must be a non-empty string
+- `brand`: Must be a non-empty string
+- `power_requirement_hp`: Required, must be a positive number
+- `working_width_m`: Required, must be a positive number
+- `implement_type`: Required, must be one of: `plow`, `harrow`, `seeder`, `sprayer`, `harvester`, `cultivator`, `mower`, `trailer`, `other`
+
+### Optional Fields
+
+- `soil_type`: String (compatible soil type)
+- `working_depth_cm`: Positive number if provided
+- `weight_kg`: Positive number if provided
+- `status`: One of `available`, `maintenance`, `inactive` (defaults to `available`)
+
+### Validation Examples
+
+<CodeGroup>
+```json Valid Create Request
+{
+  "implement_name": "Arado de discos 3 cuerpos",
+  "brand": "Baldan",
+  "power_requirement_hp": 85,
+  "working_width_m": 1.2,
+  "implement_type": "plow"
+}
+```
+
+```json Invalid Create Request
+{
+  "implement_name": "",
+  "brand": "Baldan",
+  "power_requirement_hp": -10,
+  "working_width_m": 0,
+  "implement_type": "invalid_type"
+}
+```
+</CodeGroup>
+
+**Validation Error Response:**
+
+```json
+{
+  "success": false,
+  "errors": [
+    "implement_name es requerido",
+    "power_requirement_hp debe ser un número positivo",
+    "working_width_m debe ser un número positivo",
+    "implement_type debe ser uno de: plow, harrow, seeder, sprayer, harvester, cultivator, mower, trailer, other"
+  ]
+}
+```
+
+## Soil Type Compatibility
+
+Implements can specify soil type compatibility. When searching, implements marked as `"All"` will match any soil type query.
+
+```javascript Example: Finding implements for clay soil
+const response = await fetch('https://api.maqagr.com/api/implements/search?soilType=clay');
+// Returns implements with soil_type="clay" OR soil_type="All"
+```
+
+## Error Responses
+
+### 400 Bad Request
+
+Returned when validation fails or invalid ID format is provided.
+
+```json
+{
+  "success": false,
+  "message": "ID de implemento inválido"
+}
+```
+
+### 401 Unauthorized
+
+Returned when authentication token is missing or invalid (admin operations).
+
+```json
+{
+  "success": false,
+  "message": "Token no proporcionado o inválido"
+}
+```
+
+### 403 Forbidden
+
+Returned when a non-admin user attempts admin operations.
+
+```json
+{
+  "success": false,
+  "message": "Acceso denegado. Se requiere rol de administrador"
+}
+```
+
+### 404 Not Found
+
+Returned when the specified implement does not exist.
+
+```json
+{
+  "success": false,
+  "message": "Implemento no encontrado"
+}
+```
+
+## Related Resources
+
+- [Tractors](/resources/tractors) - Tractors that can power these implements
+- [Recommendations](/api-reference/recommendations) - Get tractor-implement compatibility recommendations
+- [API Reference](/api-reference/implements) - Complete API endpoint documentation
+
+## Source Code References
+
+- Model: `src/models/Implement.js`
+- Controller: `src/controllers/implementController.js`
+- Routes: `src/routes/implement.routes.js`
+- Validation: `src/middleware/validation.middleware.js`

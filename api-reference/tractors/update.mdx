@@ -1,0 +1,476 @@
+---
+title: 'Update Tractor'
+description: 'Modify an existing tractor in the catalog (admin only)'
+---
+
+# Update Tractor
+
+Update an existing tractor's information. This endpoint requires administrator authentication. Only the fields provided in the request body will be updated (partial updates supported).
+
+<Warning>
+  **Admin Access Required** - This endpoint requires a valid JWT token with `role_id: 1` (administrator).
+</Warning>
+
+## Endpoint
+
+```
+PUT /api/tractors/:id
+```
+
+## Authentication
+
+This endpoint requires both authentication and administrator privileges:
+
+```http
+Authorization: Bearer <jwt_token>
+```
+
+See the [Authentication](/authentication) guide for details on obtaining and using JWT tokens.
+
+## Path Parameters
+
+<ParamField path="id" type="integer" required>
+  Unique identifier of the tractor to update. Must be a positive integer.
+</ParamField>
+
+## Request Body
+
+<Info>
+  All fields are optional. Only include the fields you want to update. The API uses SQL `COALESCE` to preserve existing values for fields not included in the request.
+</Info>
+
+<ParamField body="brand" type="string">
+  Tractor brand/manufacturer name. Cannot be empty if provided.
+  
+  **Example:** `"John Deere"`, `"Case IH"`
+</ParamField>
+
+<ParamField body="model" type="string">
+  Tractor model identifier. Cannot be empty if provided.
+  
+  **Example:** `"6130M"`, `"Magnum 280"`
+</ParamField>
+
+<ParamField body="engine_power_hp" type="number">
+  Engine power in horsepower (HP). Must be a positive number if provided.
+  
+  **Example:** `135`, `285.5`
+</ParamField>
+
+<ParamField body="traction_type" type="string">
+  Type of traction system. Must be one of: `4x2`, `4x4`, `track`
+</ParamField>
+
+<ParamField body="name" type="string">
+  Display name for the tractor.
+  
+  **Example:** `"John Deere 6130M Updated"`
+</ParamField>
+
+<ParamField body="weight_kg" type="number">
+  Total weight in kilograms. Must be a positive number if provided.
+  
+  **Example:** `5300`, `11500.5`
+</ParamField>
+
+<ParamField body="traction_force_kn" type="number">
+  Traction force in kilonewtons (kN). Must be a positive number if provided.
+  
+  **Example:** `46.0`, `87.2`
+</ParamField>
+
+<ParamField body="tire_type" type="string">
+  Type of tires installed on the tractor.
+  
+  **Example:** `"radial"`, `"bias"`
+</ParamField>
+
+<ParamField body="tire_width_mm" type="number">
+  Tire width in millimeters. Must be a positive number if provided.
+  
+  **Example:** `550`, `720`
+</ParamField>
+
+<ParamField body="tire_diameter_mm" type="number">
+  Tire diameter in millimeters. Must be a positive number if provided.
+  
+  **Example:** `1620`, `1900`
+</ParamField>
+
+<ParamField body="tire_pressure_psi" type="number">
+  Recommended tire pressure in PSI. Must be a positive number if provided.
+  
+  **Example:** `16`, `18.5`
+</ParamField>
+
+<ParamField body="status" type="string">
+  Current status of the tractor. Must be one of: `available`, `maintenance`, `inactive`
+</ParamField>
+
+## Response Fields
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  The updated tractor object with all fields
+</ResponseField>
+
+## Example Request - Partial Update
+
+<CodeGroup>
+```bash cURL
+curl -X PUT http://localhost:4000/api/tractors/1 \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -d '{
+    "engine_power_hp": 135,
+    "status": "maintenance"
+  }'
+```
+
+```javascript JavaScript
+const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...';
+const tractorId = 1;
+
+// Only update specific fields
+const response = await fetch(`http://localhost:4000/api/tractors/${tractorId}`, {
+  method: 'PUT',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  },
+  body: JSON.stringify({
+    engine_power_hp: 135,
+    status: 'maintenance'
+  })
+});
+
+const data = await response.json();
+if (data.success) {
+  console.log('Tractor updated:', data.data);
+}
+```
+
+```python Python
+import requests
+
+token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+tractor_id = 1
+
+# Only update specific fields
+response = requests.put(
+    f'http://localhost:4000/api/tractors/{tractor_id}',
+    headers={
+        'Content-Type': 'application/json',
+        'Authorization': f'Bearer {token}'
+    },
+    json={
+        'engine_power_hp': 135,
+        'status': 'maintenance'
+    }
+)
+
+data = response.json()
+if data['success']:
+    print(f"Updated tractor: {data['data']}")
+```
+</CodeGroup>
+
+## Example Request - Full Update
+
+<CodeGroup>
+```bash cURL
+curl -X PUT http://localhost:4000/api/tractors/1 \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -d '{
+    "name": "John Deere 6130M Updated",
+    "brand": "John Deere",
+    "model": "6130M",
+    "engine_power_hp": 135,
+    "weight_kg": 5300,
+    "traction_force_kn": 46.0,
+    "traction_type": "4x4",
+    "tire_type": "radial",
+    "tire_width_mm": 550,
+    "tire_diameter_mm": 1620,
+    "tire_pressure_psi": 16,
+    "status": "available"
+  }'
+```
+
+```javascript JavaScript
+const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...';
+const tractorId = 1;
+
+const response = await fetch(`http://localhost:4000/api/tractors/${tractorId}`, {
+  method: 'PUT',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  },
+  body: JSON.stringify({
+    name: 'John Deere 6130M Updated',
+    brand: 'John Deere',
+    model: '6130M',
+    engine_power_hp: 135,
+    weight_kg: 5300,
+    traction_force_kn: 46.0,
+    traction_type: '4x4',
+    tire_type: 'radial',
+    tire_width_mm: 550,
+    tire_diameter_mm: 1620,
+    tire_pressure_psi: 16,
+    status: 'available'
+  })
+});
+
+const data = await response.json();
+```
+
+```python Python
+import requests
+
+token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+tractor_id = 1
+
+response = requests.put(
+    f'http://localhost:4000/api/tractors/{tractor_id}',
+    headers={
+        'Content-Type': 'application/json',
+        'Authorization': f'Bearer {token}'
+    },
+    json={
+        'name': 'John Deere 6130M Updated',
+        'brand': 'John Deere',
+        'model': '6130M',
+        'engine_power_hp': 135,
+        'weight_kg': 5300,
+        'traction_force_kn': 46.0,
+        'traction_type': '4x4',
+        'tire_type': 'radial',
+        'tire_width_mm': 550,
+        'tire_diameter_mm': 1620,
+        'tire_pressure_psi': 16,
+        'status': 'available'
+    }
+)
+
+data = response.json()
+```
+</CodeGroup>
+
+## Example Responses
+
+<CodeGroup>
+```json 200 OK
+{
+  "success": true,
+  "data": {
+    "tractor_id": 1,
+    "name": "John Deere 6130M",
+    "brand": "John Deere",
+    "model": "6130M",
+    "engine_power_hp": 135,
+    "weight_kg": 5200,
+    "traction_force_kn": 45.5,
+    "traction_type": "4x4",
+    "tire_type": "radial",
+    "tire_width_mm": 540,
+    "tire_diameter_mm": 1600,
+    "tire_pressure_psi": 15,
+    "status": "maintenance"
+  }
+}
+```
+
+```json 400 Invalid ID
+{
+  "success": false,
+  "message": "ID de tractor inválido"
+}
+```
+
+```json 400 Validation Error
+{
+  "success": false,
+  "errors": [
+    "brand no puede estar vacío",
+    "engine_power_hp debe ser un número positivo"
+  ]
+}
+```
+
+```json 401 Unauthorized
+{
+  "success": false,
+  "message": "Token no proporcionado"
+}
+```
+
+```json 403 Forbidden
+{
+  "success": false,
+  "message": "Acceso denegado. Se requiere rol de administrador"
+}
+```
+
+```json 404 Not Found
+{
+  "success": false,
+  "message": "Tractor no encontrado"
+}
+```
+
+```json 500 Server Error
+{
+  "success": false,
+  "message": "Error interno del servidor"
+}
+```
+</CodeGroup>
+
+## Validation Rules
+
+### Update-Specific Validation
+
+<Info>
+  For updates (PUT requests), required fields from creation are optional. However, if you provide a field, it must pass validation.
+</Info>
+
+<AccordionGroup>
+  <Accordion title="String Fields">
+    If provided, string fields cannot be empty:
+    - `brand` - Cannot be empty string or whitespace
+    - `model` - Cannot be empty string or whitespace
+    
+    **Valid:** `"John Deere"`, `"Updated Model"`
+    
+    **Invalid:** `""`, `"   "`, `null`
+  </Accordion>
+  
+  <Accordion title="Numeric Fields">
+    If provided, must be positive numbers:
+    - `engine_power_hp`
+    - `weight_kg`
+    - `traction_force_kn`
+    - `tire_width_mm`
+    - `tire_diameter_mm`
+    - `tire_pressure_psi`
+    
+    **Valid:** `130`, `5200.5`, `45`
+    
+    **Invalid:** `0`, `-10`, `"abc"`
+  </Accordion>
+  
+  <Accordion title="Enum Fields">
+    Must match allowed values if provided:
+    
+    **traction_type:** `4x2`, `4x4`, `track`
+    
+    **status:** `available`, `maintenance`, `inactive`
+  </Accordion>
+</AccordionGroup>
+
+## Common Use Cases
+
+<CardGroup cols={2}>
+  <Card title="Change Status" icon="toggle-on">
+    Update tractor status (e.g., from `available` to `maintenance`)
+    ```json
+    { "status": "maintenance" }
+    ```
+  </Card>
+  
+  <Card title="Update Specifications" icon="wrench">
+    Modify technical specifications after verification
+    ```json
+    {
+      "engine_power_hp": 135,
+      "weight_kg": 5300
+    }
+    ```
+  </Card>
+  
+  <Card title="Correct Model Info" icon="pen">
+    Fix typos or update model information
+    ```json
+    {
+      "name": "John Deere 6130M Premium",
+      "model": "6130M"
+    }
+    ```
+  </Card>
+  
+  <Card title="Update Tire Config" icon="circle">
+    Change tire specifications
+    ```json
+    {
+      "tire_width_mm": 550,
+      "tire_pressure_psi": 16
+    }
+    ```
+  </Card>
+</CardGroup>
+
+## Error Responses
+
+<AccordionGroup>
+  <Accordion title="400 Bad Request - Invalid ID">
+    Returned when the tractor ID in the URL path is not a valid positive integer.
+    
+    **Examples:** `/api/tractors/abc`, `/api/tractors/-1`, `/api/tractors/0`
+  </Accordion>
+  
+  <Accordion title="400 Bad Request - Validation Errors">
+    Returned when the request body contains invalid data. The response includes an `errors` array.
+    
+    **Common errors:**
+    - `"brand no puede estar vacío"` - Empty brand provided
+    - `"model no puede estar vacío"` - Empty model provided
+    - `"engine_power_hp debe ser un número positivo"` - Invalid power value
+    - `"traction_type debe ser uno de: 4x2, 4x4, track"` - Invalid traction type
+    - `"status debe ser uno de: available, maintenance, inactive"` - Invalid status
+  </Accordion>
+  
+  <Accordion title="401 Unauthorized">
+    Returned when authentication fails (missing, malformed, expired, or invalid token).
+  </Accordion>
+  
+  <Accordion title="403 Forbidden">
+    Returned when the authenticated user is not an administrator.
+  </Accordion>
+  
+  <Accordion title="404 Not Found">
+    Returned when no tractor exists with the specified ID.
+  </Accordion>
+  
+  <Accordion title="500 Internal Server Error">
+    Returned when an unexpected server error occurs.
+  </Accordion>
+</AccordionGroup>
+
+## Cache Invalidation
+
+<Info>
+  Updating a tractor automatically invalidates all tractor-related and recommendation caches. This ensures that GET requests immediately reflect the updated information.
+</Info>
+
+## Related Endpoints
+
+<CardGroup cols={2}>
+  <Card title="Get Tractor" icon="eye" href="/api-reference/tractors/get">
+    View current tractor details before updating
+  </Card>
+  <Card title="Create Tractor" icon="plus" href="/api-reference/tractors/create">
+    Add new tractors to the catalog
+  </Card>
+  <Card title="Delete Tractor" icon="trash" href="/api-reference/tractors/delete">
+    Remove tractor from catalog
+  </Card>
+  <Card title="List Tractors" icon="list" href="/api-reference/tractors/list">
+    View all tractors
+  </Card>
+</CardGroup>

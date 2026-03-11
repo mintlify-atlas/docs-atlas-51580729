@@ -1,0 +1,200 @@
+---
+title: 'Register User'
+api: 'POST /api/auth/register'
+description: 'Create a new user account in the system'
+---
+
+## Description
+
+Creates a new user account in the system. The user is created with the "user" role (role_id: 2) by default. The password must meet security requirements (minimum 8 characters, uppercase, lowercase, number, and special character).
+
+## Authentication
+
+This endpoint is **public** and does not require authentication.
+
+## Rate Limiting
+
+- **Limit:** 50 requests per 15 minutes per IP address
+- **Error Message:** "Demasiadas peticiones desde esta IP, por favor intente más tarde."
+
+## Request Body
+
+<ParamField path="name" type="string" required>
+  Full name of the user
+</ParamField>
+
+<ParamField path="email" type="string" required>
+  User's email address (must be valid format)
+</ParamField>
+
+<ParamField path="password" type="string" required>
+  User's password (minimum 8 characters, must include uppercase, lowercase, number, and special character)
+</ParamField>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Human-readable response message
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  Response data containing user information and authentication token
+  
+  <Expandable title="data properties">
+    <ResponseField name="user" type="object">
+      User information
+      
+      <Expandable title="user properties">
+        <ResponseField name="user_id" type="integer">
+          Unique user identifier
+        </ResponseField>
+        
+        <ResponseField name="name" type="string">
+          User's full name
+        </ResponseField>
+        
+        <ResponseField name="email" type="string">
+          User's email address
+        </ResponseField>
+        
+        <ResponseField name="role_id" type="integer">
+          Role identifier (2 for regular user)
+        </ResponseField>
+        
+        <ResponseField name="status" type="string">
+          User status (always "active" for new users)
+        </ResponseField>
+        
+        <ResponseField name="registration_date" type="string">
+          ISO 8601 timestamp of registration
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="token" type="string">
+      JWT authentication token to use for protected endpoints
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Example Request
+
+```bash cURL
+curl -X POST https://api.maqagr.com/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Juan Pérez",
+    "email": "juan@example.com",
+    "password": "MiPassword123!"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.maqagr.com/api/auth/register', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    name: 'Juan Pérez',
+    email: 'juan@example.com',
+    password: 'MiPassword123!'
+  })
+});
+
+const data = await response.json();
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    'https://api.maqagr.com/api/auth/register',
+    json={
+        'name': 'Juan Pérez',
+        'email': 'juan@example.com',
+        'password': 'MiPassword123!'
+    }
+)
+
+data = response.json()
+```
+
+## Success Response (201)
+
+```json
+{
+  "success": true,
+  "message": "Usuario registrado exitosamente",
+  "data": {
+    "user": {
+      "user_id": 1,
+      "name": "Juan Pérez",
+      "email": "juan@example.com",
+      "role_id": 2,
+      "status": "active",
+      "registration_date": "2026-02-13T10:00:00.000Z"
+    },
+    "token": "eyJhbGciOiJIUzI1NiIs..."
+  }
+}
+```
+
+## Error Responses
+
+### 400 - Missing Required Fields
+
+```json
+{
+  "success": false,
+  "message": "Datos de entrada incompletos",
+  "errors": [
+    "Nombre es requerido",
+    "Email es requerido"
+  ]
+}
+```
+
+### 400 - Invalid Email Format
+
+```json
+{
+  "success": false,
+  "message": "Formato de email inválido"
+}
+```
+
+### 400 - Weak Password
+
+```json
+{
+  "success": false,
+  "message": "Contraseña no cumple requisitos",
+  "errors": [
+    "Debe tener al menos 8 caracteres",
+    "Debe incluir una mayúscula"
+  ]
+}
+```
+
+### 409 - Email Already Registered
+
+```json
+{
+  "success": false,
+  "message": "El email ya está registrado"
+}
+```
+
+### 500 - Internal Server Error
+
+```json
+{
+  "success": false,
+  "message": "Error interno del servidor"
+}
+```

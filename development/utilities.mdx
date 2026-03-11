@@ -1,0 +1,541 @@
+---
+title: Utilities
+description: Comprehensive guide to utility functions and helpers available in the MaqAgr API
+---
+
+## Overview
+
+The MaqAgr API provides a rich set of utility functions organized into specialized modules. These utilities ensure code consistency, reduce boilerplate, and improve maintainability across the codebase.
+
+## Logger Utility
+
+Centralized logging system using Winston with multiple transports, daily rotation, and structured JSON logging.
+
+### Configuration
+
+Location: `src/config/logger.js` (re-exported from `src/utils/logger.js`)
+
+```javascript
+import logger from './utils/logger.js';
+```
+
+### Features
+
+- **Multiple log levels**: error, warn, info, http, debug
+- **Daily log rotation**: Keeps logs for 14 days, compresses old files
+- **Environment-aware**: Different output formats for development/production
+- **Request correlation**: Automatic request-id tracking
+- **Slow query detection**: Warns about database queries exceeding threshold
+
+### Usage
+
+<CodeGroup>
+```javascript Basic Logging
+import logger from './utils/logger.js';
+
+// Different log levels
+logger.error('Database connection failed', { error: err });
+logger.warn('High memory usage detected', { usage: '85%' });
+logger.info('User registered successfully', { userId: 123 });
+logger.http('GET /api/tractors - 200 OK');
+logger.debug('Cache hit for key: user:123');
+```
+
+```javascript HTTP Request Logging
+import logger from './utils/logger.js';
+import express from 'express';
+
+const app = express();
+
+// Automatically logs all HTTP requests with metadata
+app.use(logger.requestLogger);
+
+// Logs include:
+// - Request ID (for correlation)
+// - Method, URL, status code
+// - Duration, IP address, user agent
+// - User ID (if authenticated)
+```
+
+```javascript Slow Query Monitoring
+import logger from './utils/logger.js';
+
+// Warns if query takes >100ms
+const users = await logger.timedQuery(
+  async () => pool.query('SELECT * FROM users'),
+  'Fetch all users',
+  100 // threshold in ms
+);
+```
+</CodeGroup>
+
+### Log Files
+
+Logs are stored in the `logs/` directory:
+
+```
+logs/
+├── combined.log           # All log levels
+├── error.log              # Errors only
+├── app-2026-03-11.log     # Daily rotation
+└── app-2026-03-10.log.gz  # Compressed archives
+```
+
+<Info>
+In test environment (`NODE_ENV=test`), logging to console and files is disabled to keep test output clean.
+</Info>
+
+## Response Utility
+
+Standardized response functions following the JSend specification.
+
+Location: `src/utils/response.util.js`
+
+### Available Functions
+
+<CodeGroup>
+```javascript Success Responses
+import { successResponse, createdResponse, noContentResponse } from './utils/response.util.js';
+
+// 200 OK - General success
+return successResponse(res, data, 'Tractores obtenidos exitosamente');
+
+// 201 Created - Resource created
+return createdResponse(res, newTractor, 'Tractor creado exitosamente');
+
+// 204 No Content - Success with no response body
+return noContentResponse(res);
+```
+
+```javascript Error Responses
+import {
+  errorResponse,
+  validationErrorResponse,
+  unauthorizedResponse,
+  forbiddenResponse,
+  notFoundResponse,
+  conflictResponse
+} from './utils/response.util.js';
+
+// 400 Bad Request - Validation errors
+return validationErrorResponse(res, errors, 'Datos inválidos');
+
+// 401 Unauthorized - Authentication required
+return unauthorizedResponse(res, 'Token inválido');
+
+// 403 Forbidden - Insufficient permissions
+return forbiddenResponse(res, 'Acceso denegado');
+
+// 404 Not Found - Resource not found
+return notFoundResponse(res, 'Tractor no encontrado');
+
+// 409 Conflict - Resource conflict
+return conflictResponse(res, 'Email ya registrado');
+
+// 500 Internal Server Error - Generic error
+return errorResponse(res, 'Error del servidor', 500);
+```
+
+```javascript Paginated Responses
+import { paginatedResponse } from './utils/response.util.js';
+
+const tractors = await getTractors(page, limit);
+const total = await getTractorCount();
+
+return paginatedResponse(
+  res,
+  tractors,
+  { page, limit, total },
+  'Tractores obtenidos exitosamente'
+);
+
+// Returns:
+// {
+//   success: true,
+//   message: "Tractores obtenidos exitosamente",
+//   data: [...],
+//   pagination: {
+//     currentPage: 1,
+//     totalPages: 5,
+//     pageSize: 10,
+//     totalItems: 50,
+//     hasNextPage: true,
+//     hasPreviousPage: false
+//   }
+// }
+```
+</CodeGroup>
+
+### Response Format
+
+All responses follow the JSend standard:
+
+**Success Response:**
+```json
+{
+  "success": true,
+  "message": "Operación exitosa",
+  "data": { ... }
+}
+```
+
+**Error Response:**
+```json
+{
+  "success": false,
+  "message": "Descripción del error",
+  "errors": [ ... ] // Optional validation errors
+}
+```
+
+## Validators Utility
+
+Comprehensive validation functions for data sanitization and verification.
+
+Location: `src/utils/validators.util.js`
+
+### String Validators
+
+<CodeGroup>
+```javascript Email & Password
+import { isValidEmail, isValidPassword, getPasswordValidationErrors } from './utils/validators.util.js';
+
+// Email validation
+if (!isValidEmail(email)) {
+  return validationErrorResponse(res, 'Email inválido');
+}
+
+// Password validation (min 8 chars, 1 uppercase, 1 number)
+if (!isValidPassword(password)) {
+  const errors = getPasswordValidationErrors(password);
+  return validationErrorResponse(res, errors);
+}
+```
+
+```javascript String Checks
+import {
+  isNonEmptyString,
+  hasMinLength,
+  hasMaxLength,
+  sanitizeString
+} from './utils/validators.util.js';
+
+if (!isNonEmptyString(name)) {
+  return validationErrorResponse(res, 'El nombre es requerido');
+}
+
+if (!hasMinLength(description, 10)) {
+  return validationErrorResponse(res, 'Descripción muy corta');
+}
+
+if (!hasMaxLength(comment, 500)) {
+  return validationErrorResponse(res, 'Comentario muy largo');
+}
+
+// Remove dangerous HTML/JS
+const cleanName = sanitizeString(userInput);
+```
+</CodeGroup>
+
+### Number Validators
+
+<CodeGroup>
+```javascript Number Validation
+import {
+  isPositiveNumber,
+  isNonNegativeNumber,
+  isPositiveInteger,
+  isInRange
+} from './utils/validators.util.js';
+
+if (!isPositiveNumber(power)) {
+  return validationErrorResponse(res, 'La potencia debe ser positiva');
+}
+
+if (!isNonNegativeNumber(weight)) {
+  return validationErrorResponse(res, 'El peso no puede ser negativo');
+}
+
+if (!isPositiveInteger(tractorId)) {
+  return validationErrorResponse(res, 'ID inválido');
+}
+
+if (!isInRange(slope, 0, 90)) {
+  return validationErrorResponse(res, 'La pendiente debe estar entre 0 y 90 grados');
+}
+```
+</CodeGroup>
+
+### Enum & Special Validators
+
+<CodeGroup>
+```javascript Enum & URL Validation
+import {
+  isValidEnum,
+  isValidURL,
+  isValidUUID,
+  isValidDate,
+  isValidCoordinates,
+  isValidPhone
+} from './utils/validators.util.js';
+
+// Enum validation
+const soilTypes = ['Franco', 'Arcilloso', 'Arenoso'];
+if (!isValidEnum(soilType, soilTypes)) {
+  return validationErrorResponse(res, 'Tipo de suelo inválido');
+}
+
+// URL validation
+if (!isValidURL(websiteUrl)) {
+  return validationErrorResponse(res, 'URL inválida');
+}
+
+// UUID validation (v4)
+if (!isValidUUID(requestId)) {
+  return validationErrorResponse(res, 'UUID inválido');
+}
+
+// Date validation
+if (!isValidDate(registrationDate)) {
+  return validationErrorResponse(res, 'Fecha inválida');
+}
+
+// Geographic coordinates
+if (!isValidCoordinates(latitude, longitude)) {
+  return validationErrorResponse(res, 'Coordenadas inválidas');
+}
+
+// Phone number (international/local)
+if (!isValidPhone(phoneNumber)) {
+  return validationErrorResponse(res, 'Teléfono inválido');
+}
+```
+</CodeGroup>
+
+### Object & Field Validation
+
+```javascript
+import { hasRequiredProperties, validateFields } from './utils/validators.util.js';
+
+// Check required properties
+const { isValid, missingProps } = hasRequiredProperties(
+  req.body,
+  ['name', 'email', 'password']
+);
+
+if (!isValid) {
+  return validationErrorResponse(res, `Campos faltantes: ${missingProps.join(', ')}`);
+}
+
+// Validate multiple fields at once
+const { isValid: allValid, errors } = validateFields(
+  req.body,
+  {
+    email: {
+      required: true,
+      validator: isValidEmail,
+      message: 'Email inválido'
+    },
+    age: {
+      required: false,
+      validator: (v) => isPositiveNumber(v) && isInRange(v, 0, 120),
+      message: 'Edad debe estar entre 0 y 120'
+    }
+  }
+);
+
+if (!allValid) {
+  return validationErrorResponse(res, errors);
+}
+```
+
+### SQL Injection Protection
+
+<Warning>
+While PostgreSQL parameterized queries are the primary defense, this utility provides defense-in-depth.
+</Warning>
+
+```javascript
+import { sanitizeSQLInput } from './utils/validators.util.js';
+
+// Remove SQL injection patterns
+const safeName = sanitizeSQLInput(userInput);
+// Removes: ', --, /*, */, ;
+
+// Still use parameterized queries!
+await pool.query(
+  'SELECT * FROM users WHERE name = $1',
+  [safeName]
+);
+```
+
+## AsyncHandler Utility
+
+Wrapper for async route handlers that eliminates repetitive try-catch blocks.
+
+Location: `src/utils/asyncHandler.util.js`
+
+### Basic Usage
+
+```javascript
+import { asyncHandler } from './utils/asyncHandler.util.js';
+
+// Without asyncHandler (verbose)
+export const getTractor = async (req, res, next) => {
+  try {
+    const tractor = await Tractor.findById(req.params.id);
+    return successResponse(res, tractor);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// With asyncHandler (clean)
+export const getTractor = asyncHandler(async (req, res) => {
+  const tractor = await Tractor.findById(req.params.id);
+  return successResponse(res, tractor);
+});
+```
+
+### Strict Mode
+
+For functions that may throw synchronous errors:
+
+```javascript
+import { asyncHandlerStrict } from './utils/asyncHandler.util.js';
+
+export const processTractor = asyncHandlerStrict(async (req, res) => {
+  // Synchronous validation that might throw
+  validateInput(req.body);
+  
+  // Async operations
+  const result = await processData(req.body);
+  return successResponse(res, result);
+});
+```
+
+## Error Classes
+
+Custom error classes for consistent error handling.
+
+Location: `src/utils/errors.util.js`
+
+```javascript
+import {
+  AppError,
+  ValidationError,
+  AuthenticationError,
+  AuthorizationError,
+  NotFoundError
+} from './utils/errors.util.js';
+
+// Generic application error
+throw new AppError('Something went wrong', 500);
+
+// Validation error with details
+throw new ValidationError(['Email is invalid', 'Password too short']);
+
+// Authentication error (401)
+throw new AuthenticationError('Invalid token');
+
+// Authorization error (403)
+throw new AuthorizationError('Admin access required');
+
+// Not found error (404)
+throw new NotFoundError('Tractor not found');
+```
+
+## Cache Utility
+
+Redis caching helpers for improved performance.
+
+Location: `src/utils/cache.util.js`
+
+```javascript
+import { cacheGet, cacheSet, cacheDel } from './utils/cache.util.js';
+
+// Get from cache
+const cachedTractors = await cacheGet('tractors:all');
+if (cachedTractors) {
+  return successResponse(res, JSON.parse(cachedTractors));
+}
+
+// Fetch from DB and cache
+const tractors = await Tractor.findAll();
+await cacheSet('tractors:all', JSON.stringify(tractors), 3600); // TTL: 1 hour
+
+// Invalidate cache
+await cacheDel('tractors:all');
+```
+
+## JWT Utility
+
+JSON Web Token generation and verification.
+
+Location: `src/utils/jwt.util.js`
+
+```javascript
+import { generateToken, verifyToken } from './utils/jwt.util.js';
+
+// Generate token
+const token = generateToken({
+  user_id: user.id,
+  email: user.email,
+  role_id: user.role_id
+});
+
+// Verify token
+try {
+  const decoded = verifyToken(token);
+  console.log('User ID:', decoded.user_id);
+} catch (error) {
+  // Token invalid or expired
+  throw new AuthenticationError('Invalid token');
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Always Validate Input">
+    Use validators for all user input before processing:
+    ```javascript
+    const { isValid, errors } = validateFields(req.body, rules);
+    if (!isValid) return validationErrorResponse(res, errors);
+    ```
+  </Accordion>
+
+  <Accordion title="Use AsyncHandler">
+    Wrap all async route handlers to automatically catch errors:
+    ```javascript
+    export const myRoute = asyncHandler(async (req, res) => { ... });
+    ```
+  </Accordion>
+
+  <Accordion title="Consistent Responses">
+    Always use response utilities for consistency:
+    ```javascript
+    return successResponse(res, data, message);
+    return notFoundResponse(res, 'Resource not found');
+    ```
+  </Accordion>
+
+  <Accordion title="Log Contextually">
+    Include relevant metadata in logs:
+    ```javascript
+    logger.info('User registered', { userId, email, ipAddress });
+    logger.error('Payment failed', { userId, amount, error: err.message });
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Related Documentation
+
+<CardGroup cols={2}>
+  <Card title="Error Handling" icon="triangle-exclamation" href="/development/error-handling">
+    Learn about error handling patterns
+  </Card>
+  <Card title="Testing" icon="vial" href="/development/testing">
+    Test utilities and helpers
+  </Card>
+</CardGroup>

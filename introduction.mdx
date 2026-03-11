@@ -1,0 +1,191 @@
+---
+title: Introduction
+description: Welcome to MaqAgr API - A robust REST API for comprehensive agricultural machinery management
+---
+
+# MaqAgr API
+
+MaqAgr is a **robust REST API** designed for comprehensive agricultural machinery management. It enables you to manage inventories of tractors and implements, characterize terrains, and perform complex engineering calculations (power losses, machinery recommendations) based on applied physics.
+
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Get up and running with MaqAgr API in minutes
+  </Card>
+  <Card title="Authentication" icon="lock" icon="shield-check" href="/authentication">
+    Learn how to authenticate using JWT tokens
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference">
+    Explore all available endpoints and operations
+  </Card>
+  <Card title="Examples" icon="lightbulb" href="/examples">
+    View practical examples and use cases
+  </Card>
+</CardGroup>
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Tractor Management" icon="tractor">
+    Complete inventory system for tractors with power, weight, brand, and model specifications
+  </Card>
+  <Card title="Implement Tracking" icon="wrench">
+    Manage agricultural implements with type, weight, and working width data
+  </Card>
+  <Card title="Terrain Characterization" icon="map">
+    Define terrain properties including soil type, slope, altitude, and area
+  </Card>
+  <Card title="Power Calculations" icon="calculator">
+    Calculate net power accounting for altitude, slope, and rolling resistance losses
+  </Card>
+  <Card title="Smart Recommendations" icon="stars">
+    AI-powered algorithm suggests the best tractor for specific tasks
+  </Card>
+  <Card title="Engineering Physics" icon="flask">
+    Implements academic formulas for agricultural efficiency calculations
+  </Card>
+</CardGroup>
+
+## Technology Stack
+
+MaqAgr API is built with modern, production-ready technologies:
+
+- **Runtime**: Node.js v24.13.0+
+- **Framework**: Express 5.2.1
+- **Database**: PostgreSQL 12+
+- **Authentication**: JWT (JSON Web Tokens)
+- **Security**: Helmet, CORS, XSS protection, rate limiting
+- **Logging**: Winston with daily rotation
+- **Cache**: Redis (ioredis)
+- **Testing**: Jest with 97+ tests (unit + E2E)
+
+## API Response Format
+
+All API responses follow the **JSend** standard for consistency:
+
+### Success Response
+
+```json
+{
+  "success": true,
+  "message": "Operation description",
+  "data": { ... }
+}
+```
+
+### Error Response
+
+```json
+{
+  "success": false,
+  "message": "Error description"
+}
+```
+
+<Note>
+In `development` mode, error responses include additional debugging information such as stack traces and error codes.
+</Note>
+
+### Paginated Response
+
+For endpoints that return lists, pagination metadata is included:
+
+```json
+{
+  "success": true,
+  "message": "Data retrieved",
+  "data": [...],
+  "pagination": {
+    "currentPage": 1,
+    "totalPages": 5,
+    "pageSize": 10,
+    "totalItems": 50,
+    "hasNextPage": true,
+    "hasPreviousPage": false
+  }
+}
+```
+
+## HTTP Status Codes
+
+The API uses standard HTTP status codes:
+
+| Code | Description | Usage |
+|------|-------------|-------|
+| **200** | OK | Successful operation |
+| **201** | Created | Resource created successfully |
+| **204** | No Content | Successful operation with no content |
+| **400** | Bad Request | Validation error or invalid data |
+| **401** | Unauthorized | Authentication required or invalid token |
+| **403** | Forbidden | No permission to access resource |
+| **404** | Not Found | Resource not found |
+| **409** | Conflict | Conflict (e.g., email already registered) |
+| **500** | Internal Server Error | Server error |
+
+## Core Endpoints
+
+The API provides the following main resource groups:
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="key">
+    **`/api/auth`**
+    
+    User registration, login, and profile management
+  </Card>
+  <Card title="Tractors" icon="tractor">
+    **`/api/tractors`**
+    
+    CRUD operations for tractor inventory
+  </Card>
+  <Card title="Implements" icon="wrench">
+    **`/api/implements`**
+    
+    Manage agricultural implements and attachments
+  </Card>
+  <Card title="Terrains" icon="mountain">
+    **`/api/terrains`**
+    
+    Create and manage terrain profiles
+  </Card>
+  <Card title="Calculations" icon="calculator">
+    **`/api/calculations`**
+    
+    Power loss and minimum power calculations
+  </Card>
+  <Card title="Recommendations" icon="sparkles">
+    **`/api/recommendations`**
+    
+    Get intelligent tractor recommendations
+  </Card>
+</CardGroup>
+
+## Base URL
+
+When running locally, the API is available at:
+
+```
+http://localhost:4000
+```
+
+<Info>
+The default port is `4000`, but this can be configured via the `PORT` environment variable.
+</Info>
+
+## Getting Help
+
+If you encounter issues or have questions:
+
+- Check the [Quick Start](/quickstart) guide for setup instructions
+- Review the [Authentication](/authentication) documentation
+- Explore the [API Reference](/api-reference) for detailed endpoint information
+- Examine response error messages - they include helpful validation details
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Get Started" icon="play" href="/quickstart">
+    Follow the quick start guide to install and configure the API
+  </Card>
+  <Card title="Authentication Guide" icon="lock" href="/authentication">
+    Learn how to authenticate and secure your API requests
+  </Card>
+</CardGroup>

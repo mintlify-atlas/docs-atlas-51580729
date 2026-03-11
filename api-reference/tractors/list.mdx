@@ -1,0 +1,234 @@
+---
+title: 'List Tractors'
+description: 'Get a paginated list of all tractors with optional filters'
+---
+
+# List Tractors
+
+Retrieve all tractors from the catalog with pagination, sorting, and filtering capabilities. This endpoint is public and does not require authentication.
+
+## Endpoint
+
+```
+GET /api/tractors
+```
+
+## Query Parameters
+
+<ParamField query="page" type="integer" default="1">
+  Page number for pagination
+</ParamField>
+
+<ParamField query="limit" type="integer" default="10">
+  Number of records per page (maximum 100)
+</ParamField>
+
+<ParamField query="sort" type="string" default="brand">
+  Field to sort by. Available fields: `brand`, `model`, `engine_power_hp`, `weight_kg`, `status`
+</ParamField>
+
+<ParamField query="order" type="string" default="asc">
+  Sort order: `asc` (ascending) or `desc` (descending)
+</ParamField>
+
+## Response Fields
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="array">
+  Array of tractor objects
+  
+  <Expandable title="Tractor Object">
+    <ResponseField name="tractor_id" type="integer">
+      Unique identifier for the tractor
+    </ResponseField>
+    
+    <ResponseField name="name" type="string">
+      Display name of the tractor (e.g., "John Deere 6130M")
+    </ResponseField>
+    
+    <ResponseField name="brand" type="string">
+      Tractor brand/manufacturer
+    </ResponseField>
+    
+    <ResponseField name="model" type="string">
+      Tractor model identifier
+    </ResponseField>
+    
+    <ResponseField name="engine_power_hp" type="number">
+      Engine power in horsepower (HP)
+    </ResponseField>
+    
+    <ResponseField name="weight_kg" type="number">
+      Total weight in kilograms
+    </ResponseField>
+    
+    <ResponseField name="traction_force_kn" type="number">
+      Traction force in kilonewtons (kN)
+    </ResponseField>
+    
+    <ResponseField name="traction_type" type="string">
+      Type of traction system. Values: `4x2`, `4x4`, `track`
+    </ResponseField>
+    
+    <ResponseField name="tire_type" type="string">
+      Type of tires (e.g., "radial", "bias")
+    </ResponseField>
+    
+    <ResponseField name="tire_width_mm" type="number">
+      Tire width in millimeters
+    </ResponseField>
+    
+    <ResponseField name="tire_diameter_mm" type="number">
+      Tire diameter in millimeters
+    </ResponseField>
+    
+    <ResponseField name="tire_pressure_psi" type="number">
+      Recommended tire pressure in PSI
+    </ResponseField>
+    
+    <ResponseField name="status" type="string">
+      Current status. Values: `available`, `maintenance`, `inactive`
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="pagination" type="object">
+  Pagination metadata
+  
+  <Expandable title="Pagination Details">
+    <ResponseField name="page" type="integer">
+      Current page number
+    </ResponseField>
+    
+    <ResponseField name="limit" type="integer">
+      Records per page
+    </ResponseField>
+    
+    <ResponseField name="total" type="integer">
+      Total number of records
+    </ResponseField>
+    
+    <ResponseField name="totalPages" type="integer">
+      Total number of pages
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X GET "http://localhost:4000/api/tractors?page=1&limit=10&sort=engine_power_hp&order=desc" \
+  -H "Content-Type: application/json"
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:4000/api/tractors?page=1&limit=10&sort=engine_power_hp&order=desc', {
+  method: 'GET',
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
+const data = await response.json();
+console.log(data.data); // Array of tractors
+console.log(data.pagination); // Pagination info
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    'http://localhost:4000/api/tractors',
+    params={
+        'page': 1,
+        'limit': 10,
+        'sort': 'engine_power_hp',
+        'order': 'desc'
+    }
+)
+
+data = response.json()
+tractors = data['data']
+pagination = data['pagination']
+```
+</CodeGroup>
+
+## Example Response
+
+<CodeGroup>
+```json 200 OK
+{
+  "success": true,
+  "data": [
+    {
+      "tractor_id": 1,
+      "name": "John Deere 6130M",
+      "brand": "John Deere",
+      "model": "6130M",
+      "engine_power_hp": 130,
+      "weight_kg": 5200,
+      "traction_force_kn": 45.5,
+      "traction_type": "4x4",
+      "tire_type": "radial",
+      "tire_width_mm": 540,
+      "tire_diameter_mm": 1600,
+      "tire_pressure_psi": 15,
+      "status": "available"
+    },
+    {
+      "tractor_id": 2,
+      "name": "Case IH Magnum 280",
+      "brand": "Case IH",
+      "model": "Magnum 280",
+      "engine_power_hp": 280,
+      "weight_kg": 11200,
+      "traction_force_kn": 85.3,
+      "traction_type": "4x4",
+      "tire_type": "radial",
+      "tire_width_mm": 710,
+      "tire_diameter_mm": 1880,
+      "tire_pressure_psi": 18,
+      "status": "available"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "total": 25,
+    "totalPages": 3
+  }
+}
+```
+
+```json 500 Error
+{
+  "success": false,
+  "message": "Error interno del servidor"
+}
+```
+</CodeGroup>
+
+## Related Endpoints
+
+<CardGroup cols={2}>
+  <Card title="Search Tractors" icon="magnifying-glass" href="/api-reference/tractors/search">
+    Filter tractors by brand, model, and power range
+  </Card>
+  <Card title="Get Available Tractors" icon="circle-check" href="/api-reference/tractors/available">
+    Get only tractors with "available" status
+  </Card>
+  <Card title="Get Tractor by ID" icon="hashtag" href="/api-reference/tractors/get">
+    Retrieve a specific tractor's details
+  </Card>
+  <Card title="Create Tractor" icon="plus" href="/api-reference/tractors/create">
+    Add a new tractor (admin only)
+  </Card>
+</CardGroup>
+
+<Note>
+  This endpoint is cached for 24 hours. Changes made through create, update, or delete operations will invalidate the cache automatically.
+</Note>

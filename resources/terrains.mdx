@@ -1,0 +1,483 @@
+---
+title: Terrains
+description: Comprehensive guide to the Terrain resource in the MaqAgr API
+---
+
+Terrains represent agricultural land parcels with environmental characteristics that affect farming operations. This resource is user-owned, meaning each terrain belongs to a specific authenticated user.
+
+## Overview
+
+The Terrain resource stores information about agricultural land parcels including altitude, slope, soil type, and temperature. Unlike Tractors and Implements, terrains are private to each user and require authentication for all operations.
+
+### Key Features
+
+- User-owned resources (ownership validation)
+- All operations require authentication
+- Users can only access their own terrains
+- Hard delete implementation (permanent removal)
+- Used in recommendation calculations for terrain-specific analysis
+
+<Warning>
+  All Terrain endpoints require authentication. Users can only view, create, update, and delete their own terrains.
+</Warning>
+
+## Data Model
+
+The Terrain model contains the following fields:
+
+<ResponseField name="terrain_id" type="integer" required>
+  Unique identifier for the terrain (auto-generated)
+</ResponseField>
+
+<ResponseField name="user_id" type="integer" required>
+  ID of the user who owns this terrain (auto-assigned from JWT token)
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Name or identifier for the terrain (e.g., "Parcela Norte", "Campo Sur")
+</ResponseField>
+
+<ResponseField name="altitude_meters" type="number" required>
+  Altitude above sea level in meters
+</ResponseField>
+
+<ResponseField name="slope_percentage" type="number" required>
+  Terrain slope as a percentage (0-100)
+</ResponseField>
+
+<ResponseField name="soil_type" type="string" required>
+  Type of soil (e.g., "clay", "sandy", "loamy", "silt")
+</ResponseField>
+
+<ResponseField name="temperature_celsius" type="number">
+  Average or current temperature in Celsius
+</ResponseField>
+
+<ResponseField name="status" type="string" default="active">
+  Current status of the terrain (e.g., "active", "inactive")
+</ResponseField>
+
+## Common Operations
+
+### List User's Terrains
+
+Retrieve all terrains owned by the authenticated user with pagination support.
+
+<CodeGroup>
+```javascript GET /api/terrains
+const response = await fetch('https://api.maqagr.com/api/terrains?limit=10&page=1', {
+  method: 'GET',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer YOUR_JWT_TOKEN'
+  }
+});
+
+const data = await response.json();
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    'https://api.maqagr.com/api/terrains',
+    params={'limit': 10, 'page': 1},
+    headers={'Authorization': 'Bearer YOUR_JWT_TOKEN'}
+)
+
+data = response.json()
+```
+</CodeGroup>
+
+**Response Example:**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "terrain_id": 1,
+      "user_id": 5,
+      "name": "Parcela Norte",
+      "altitude_meters": 2500,
+      "slope_percentage": 15,
+      "soil_type": "clay",
+      "temperature_celsius": 18,
+      "status": "active"
+    },
+    {
+      "terrain_id": 2,
+      "user_id": 5,
+      "name": "Campo Sur",
+      "altitude_meters": 2300,
+      "slope_percentage": 8,
+      "soil_type": "loamy",
+      "temperature_celsius": 20,
+      "status": "active"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "total": 2,
+    "totalPages": 1
+  }
+}
+```
+
+### Get Terrain by ID
+
+Retrieve a specific terrain by its unique identifier. Only returns the terrain if it belongs to the authenticated user.
+
+<CodeGroup>
+```javascript GET /api/terrains/:id
+const response = await fetch('https://api.maqagr.com/api/terrains/1', {
+  method: 'GET',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer YOUR_JWT_TOKEN'
+  }
+});
+
+const data = await response.json();
+```
+</CodeGroup>
+
+**Response Example:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "terrain_id": 1,
+    "user_id": 5,
+    "name": "Parcela Norte",
+    "altitude_meters": 2500,
+    "slope_percentage": 15,
+    "soil_type": "clay",
+    "temperature_celsius": 18,
+    "status": "active"
+  }
+}
+```
+
+<Info>
+  If the terrain exists but doesn't belong to the authenticated user, a 404 error is returned to prevent information disclosure.
+</Info>
+
+### Create Terrain
+
+Create a new terrain associated with the authenticated user. The `user_id` is automatically assigned from the JWT token.
+
+<CodeGroup>
+```javascript POST /api/terrains
+const response = await fetch('https://api.maqagr.com/api/terrains', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer YOUR_JWT_TOKEN'
+  },
+  body: JSON.stringify({
+    name: "Parcela Norte",
+    altitude_meters: 2500,
+    slope_percentage: 15,
+    soil_type: "clay",
+    temperature_celsius: 18,
+    status: "active"
+  })
+});
+
+const data = await response.json();
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    'https://api.maqagr.com/api/terrains',
+    json={
+        'name': 'Parcela Norte',
+        'altitude_meters': 2500,
+        'slope_percentage': 15,
+        'soil_type': 'clay',
+        'temperature_celsius': 18
+    },
+    headers={'Authorization': 'Bearer YOUR_JWT_TOKEN'}
+)
+
+data = response.json()
+```
+</CodeGroup>
+
+**Response Example:**
+
+```json
+{
+  "success": true,
+  "message": "Terreno creado exitosamente",
+  "data": {
+    "terrain_id": 3,
+    "user_id": 5,
+    "name": "Parcela Norte",
+    "altitude_meters": 2500,
+    "slope_percentage": 15,
+    "soil_type": "clay",
+    "temperature_celsius": 18,
+    "status": "active"
+  }
+}
+```
+
+### Update Terrain
+
+Update an existing terrain. Only the owner can update their terrains. Only provided fields are updated (partial update using COALESCE).
+
+<CodeGroup>
+```javascript PUT /api/terrains/:id
+const response = await fetch('https://api.maqagr.com/api/terrains/1', {
+  method: 'PUT',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer YOUR_JWT_TOKEN'
+  },
+  body: JSON.stringify({
+    name: "Parcela Norte Actualizada",
+    slope_percentage: 12,
+    temperature_celsius: 20
+  })
+});
+
+const data = await response.json();
+```
+</CodeGroup>
+
+**Response Example:**
+
+```json
+{
+  "success": true,
+  "message": "Terreno actualizado exitosamente",
+  "data": {
+    "terrain_id": 1,
+    "user_id": 5,
+    "name": "Parcela Norte Actualizada",
+    "altitude_meters": 2500,
+    "slope_percentage": 12,
+    "soil_type": "clay",
+    "temperature_celsius": 20,
+    "status": "active"
+  }
+}
+```
+
+### Delete Terrain
+
+<Warning>
+  Unlike Tractors and Implements, terrains use hard delete. The terrain is permanently removed from the database and cannot be recovered.
+</Warning>
+
+Delete a terrain permanently. Only the owner can delete their terrains.
+
+<CodeGroup>
+```javascript DELETE /api/terrains/:id
+const response = await fetch('https://api.maqagr.com/api/terrains/1', {
+  method: 'DELETE',
+  headers: {
+    'Authorization': 'Bearer YOUR_JWT_TOKEN'
+  }
+});
+
+const data = await response.json();
+```
+</CodeGroup>
+
+**Response Example:**
+
+```json
+{
+  "success": true,
+  "message": "Terreno eliminado exitosamente",
+  "data": {
+    "terrain_id": 1,
+    "user_id": 5,
+    "name": "Parcela Norte",
+    "altitude_meters": 2500,
+    "slope_percentage": 15,
+    "soil_type": "clay",
+    "temperature_celsius": 18,
+    "status": "active"
+  }
+}
+```
+
+## Validation Rules
+
+When creating or updating terrains, the following validation rules apply:
+
+### Required Fields (Create)
+
+- `name`: Must be a non-empty string
+- `altitude_meters`: Required, must be a number
+- `slope_percentage`: Required, must be a number (typically 0-100)
+- `soil_type`: Required, must be a non-empty string
+
+### Optional Fields
+
+- `temperature_celsius`: Number (can be null)
+- `status`: String (defaults to "active")
+
+<Note>
+  The `user_id` field is automatically assigned from the authenticated user's JWT token and should not be included in the request body.
+</Note>
+
+### Validation Examples
+
+<CodeGroup>
+```json Valid Create Request
+{
+  "name": "Parcela Norte",
+  "altitude_meters": 2500,
+  "slope_percentage": 15,
+  "soil_type": "clay",
+  "temperature_celsius": 18
+}
+```
+
+```json Invalid Create Request
+{
+  "name": "",
+  "altitude_meters": null,
+  "slope_percentage": null,
+  "soil_type": ""
+}
+```
+</CodeGroup>
+
+**Validation Error Response:**
+
+```json
+{
+  "success": false,
+  "errors": [
+    "name es requerido",
+    "altitude_meters es requerido",
+    "slope_percentage es requerido",
+    "soil_type es requerido"
+  ]
+}
+```
+
+## Ownership Validation
+
+All terrain operations include ownership validation to ensure users can only access their own data:
+
+```javascript Controller Implementation (src/controllers/terrainController.js)
+// Get terrain by ID with ownership validation
+const terrain = await Terrain.findByIdAndUser(id, userId);
+
+if (!terrain) {
+  return res.status(404).json({
+    success: false,
+    message: "Terreno no encontrado"
+  });
+}
+```
+
+This pattern is used in:
+- `getTerrainById()` - Line 72 in terrainController.js
+- `updateTerrain()` - Line 162 in terrainController.js
+- `deleteTerrain()` - Line 223 in terrainController.js
+
+## Error Responses
+
+### 400 Bad Request
+
+Returned when validation fails or invalid ID format is provided.
+
+```json
+{
+  "success": false,
+  "message": "ID de terreno inválido"
+}
+```
+
+Or with validation errors:
+
+```json
+{
+  "success": false,
+  "errors": [
+    "name es requerido",
+    "altitude_meters es requerido",
+    "soil_type es requerido"
+  ]
+}
+```
+
+### 401 Unauthorized
+
+Returned when authentication token is missing or invalid.
+
+```json
+{
+  "success": false,
+  "message": "Token no proporcionado o inválido"
+}
+```
+
+### 404 Not Found
+
+Returned when the terrain does not exist or doesn't belong to the authenticated user.
+
+```json
+{
+  "success": false,
+  "message": "Terreno no encontrado"
+}
+```
+
+## Use Cases
+
+### Agricultural Recommendations
+
+Terrains are used in the recommendation system to calculate optimal tractor-implement pairings based on environmental factors:
+
+- Altitude affects engine performance and power requirements
+- Slope percentage impacts traction and stability requirements
+- Soil type determines implement compatibility
+- Temperature can affect operational efficiency
+
+```javascript Example: Get recommendations for a terrain
+const terrainResponse = await fetch('https://api.maqagr.com/api/terrains/1', {
+  headers: { 'Authorization': 'Bearer YOUR_JWT_TOKEN' }
+});
+
+const terrain = await terrainResponse.json();
+
+// Use terrain data in recommendations
+const recommendationResponse = await fetch('https://api.maqagr.com/api/recommendations', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer YOUR_JWT_TOKEN'
+  },
+  body: JSON.stringify({
+    terrain_id: terrain.data.terrain_id,
+    tractor_id: 1,
+    implement_id: 2
+  })
+});
+```
+
+## Related Resources
+
+- [Authentication](/authentication) - How to obtain JWT tokens for terrain operations
+- [Recommendations](/api-reference/recommendations) - Use terrains in recommendation calculations
+- [API Reference](/api-reference/terrains) - Complete API endpoint documentation
+
+## Source Code References
+
+- Model: `src/models/Terrain.js`
+- Controller: `src/controllers/terrainController.js`
+- Routes: `src/routes/terrain.routes.js`
+- Auth Middleware: `src/middleware/auth.middleware.js`

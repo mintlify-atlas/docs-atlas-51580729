@@ -1,80 +1,435 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick Start
+description: Get up and running with MaqAgr API in minutes
 ---
 
-## Get started in three steps
+# Quick Start Guide
 
-Get your documentation site running locally and make your first customization.
+This guide will help you install, configure, and make your first API request to MaqAgr.
 
-### Step 1: Set up your local environment
+## Prerequisites
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
+Before you begin, ensure you have the following installed:
+
+<CardGroup cols={3}>
+  <Card title="Node.js" icon="node-js">
+    **v24.13.0 or higher**
     
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
+    JavaScript runtime
+  </Card>
+  <Card title="PostgreSQL" icon="database">
+    **v12 or higher**
     
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
+    Relational database
+  </Card>
+  <Card title="npm/pnpm" icon="box">
+    **Latest version**
     
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
-
-<CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+    Package manager
+  </Card>
 </CardGroup>
 
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>
+## Installation
+
+<Steps>
+  <Step title="Clone the repository">
+    Clone the MaqAgr backend repository to your local machine:
+    
+    ```bash
+    git clone https://github.com/David9604/BackMaqagr.git
+    cd BackMaqagr
+    ```
+  </Step>
+  
+  <Step title="Install dependencies">
+    Install all required Node.js packages:
+    
+    ```bash
+    npm install
+    ```
+    
+    <Info>
+    The project uses ES modules (`"type": "module"` in package.json), so all imports use ES6 syntax.
+    </Info>
+  </Step>
+  
+  <Step title="Configure environment variables">
+    Create a `.env` file in the root directory with your configuration:
+    
+    ```bash
+    cp .env.example .env
+    # Edit .env with your database credentials and JWT secret
+    ```
+    
+    <Note>
+    If `.env.example` doesn't exist, create a `.env` file manually with the variables shown below.
+    </Note>
+    
+    **Required environment variables:**
+    
+    ```bash .env
+    # Server Configuration
+    PORT=4000
+    NODE_ENV=development
+    
+    # Database Configuration
+    DB_HOST=localhost
+    DB_PORT=5432
+    DB_NAME=MaqAgr
+    DB_USER=postgres
+    DB_PASS=your_postgres_password
+    
+    # JWT Configuration
+    JWT_SECRET=your_super_secret_key_here
+    JWT_EXPIRES_IN=24h
+    ```
+    
+    <Warning>
+    Never commit your `.env` file to version control. Always use a strong, unique `JWT_SECRET` in production.
+    </Warning>
+  </Step>
+  
+  <Step title="Set up the database">
+    Create the PostgreSQL database and import the schema:
+    
+    ```bash
+    # Create database
+    createdb MaqAgr
+    
+    # Import schema files
+    psql -d MaqAgr -f docs/dbSetting/users_202601311817.sql
+    psql -d MaqAgr -f docs/dbSetting/tractor_202601311817.sql
+    psql -d MaqAgr -f docs/dbSetting/implement_202601311817.sql
+    psql -d MaqAgr -f docs/dbSetting/terrain_202601311817.sql
+    psql -d MaqAgr -f database/indexes.sql
+    ```
+    
+    <Info>
+    The schema files create all necessary tables, relationships, and indexes for the API.
+    </Info>
+  </Step>
+  
+  <Step title="Start the server">
+    Run the development server:
+    
+    ```bash
+    npm run dev  # Development mode with nodemon
+    # OR
+    npm start    # Production mode
+    ```
+    
+    You should see output similar to:
+    
+    ```
+    🚜 Servidor corriendo en puerto 4000
+    📡 Ambiente: development
+    ```
+    
+    The API is now running at `http://localhost:4000`
+  </Step>
+</Steps>
+
+## Your First API Request
+
+Let's walk through a complete authentication flow and make your first authenticated request.
+
+<Steps>
+  <Step title="Register a new user">
+    Create a new user account by sending a POST request to `/api/auth/register`:
+    
+    ```bash cURL
+    curl -X POST http://localhost:4000/api/auth/register \
+      -H "Content-Type: application/json" \
+      -d '{
+        "name": "Juan Pérez",
+        "email": "juan@example.com",
+        "password": "SecurePass123!"
+      }'
+    ```
+    
+    <CodeGroup>
+    ```javascript JavaScript (fetch)
+    const response = await fetch('http://localhost:4000/api/auth/register', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        name: 'Juan Pérez',
+        email: 'juan@example.com',
+        password: 'SecurePass123!'
+      })
+    });
+    
+    const data = await response.json();
+    console.log(data);
+    ```
+    
+    ```python Python (requests)
+    import requests
+    
+    response = requests.post(
+        'http://localhost:4000/api/auth/register',
+        json={
+            'name': 'Juan Pérez',
+            'email': 'juan@example.com',
+            'password': 'SecurePass123!'
+        }
+    )
+    
+    print(response.json())
+    ```
+    </CodeGroup>
+    
+    **Password requirements:**
+    - Minimum 8 characters
+    - At least one uppercase letter
+    - At least one number
+    - At least one special character
+    
+    **Response (201 Created):**
+    
+    ```json
+    {
+      "success": true,
+      "message": "Usuario registrado exitosamente",
+      "data": {
+        "user": {
+          "user_id": 1,
+          "name": "Juan Pérez",
+          "email": "juan@example.com",
+          "role_id": 2,
+          "status": "active",
+          "registration_date": "2026-03-11T10:00:00.000Z"
+        },
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      }
+    }
+    ```
+    
+    <Info>
+    New users are assigned `role_id: 2` (regular user) by default. The response includes a JWT token valid for 24 hours.
+    </Info>
+  </Step>
+  
+  <Step title="Save your token">
+    Copy the `token` value from the registration response. You'll need this for authenticated requests.
+    
+    The token payload contains:
+    
+    ```json
+    {
+      "user_id": 1,
+      "email": "juan@example.com",
+      "role_id": 2,
+      "name": "Juan Pérez",
+      "iat": 1710151200,
+      "exp": 1710237600
+    }
+    ```
+    
+    <Warning>
+    Store tokens securely. Never expose them in client-side code or logs. Tokens expire after 24 hours.
+    </Warning>
+  </Step>
+  
+  <Step title="Make an authenticated request">
+    Use your token to access a protected endpoint. Let's fetch your user profile:
+    
+    ```bash cURL
+    curl -X GET http://localhost:4000/api/auth/profile \
+      -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    ```
+    
+    <CodeGroup>
+    ```javascript JavaScript (fetch)
+    const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...';
+    
+    const response = await fetch('http://localhost:4000/api/auth/profile', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    const profile = await response.json();
+    console.log(profile);
+    ```
+    
+    ```python Python (requests)
+    import requests
+    
+    token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+    
+    response = requests.get(
+        'http://localhost:4000/api/auth/profile',
+        headers={'Authorization': f'Bearer {token}'}
+    )
+    
+    print(response.json())
+    ```
+    </CodeGroup>
+    
+    **Response (200 OK):**
+    
+    ```json
+    {
+      "success": true,
+      "message": "Perfil obtenido exitosamente",
+      "data": {
+        "user": {
+          "user_id": 1,
+          "name": "Juan Pérez",
+          "email": "juan@example.com",
+          "role_id": 2,
+          "role_name": "Usuario",
+          "status": "active",
+          "registration_date": "2026-03-11T10:00:00.000Z",
+          "last_session": "2026-03-11T10:05:00.000Z"
+        }
+      }
+    }
+    ```
+  </Step>
+  
+  <Step title="Explore other endpoints">
+    Now that you're authenticated, you can access other API endpoints. Let's list available tractors:
+    
+    ```bash cURL
+    curl -X GET http://localhost:4000/api/tractors \
+      -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    ```
+    
+    **Response (200 OK):**
+    
+    ```json
+    {
+      "success": true,
+      "message": "Tractores obtenidos exitosamente",
+      "data": [
+        {
+          "tractor_id": 1,
+          "name": "John Deere 5075E",
+          "power": 75,
+          "weight": 3200,
+          "brand": "John Deere",
+          "model": "5075E"
+        }
+      ]
+    }
+    ```
+  </Step>
+</Steps>
+
+## Common Errors
+
+Here are some common errors you might encounter and how to resolve them:
+
+### Missing or Invalid Token
+
+```json
+{
+  "success": false,
+  "message": "Token no proporcionado"
+}
+```
+
+**Solution:** Include the `Authorization: Bearer <token>` header in your request.
+
+### Expired Token
+
+```json
+{
+  "success": false,
+  "message": "Token inválido o expirado"
+}
+```
+
+**Solution:** Tokens expire after 24 hours. Log in again to get a new token.
+
+### Validation Error
+
+```json
+{
+  "success": false,
+  "message": "Contraseña no cumple requisitos",
+  "errors": [
+    "Debe tener al menos 8 caracteres",
+    "Debe incluir una mayúscula"
+  ]
+}
+```
+
+**Solution:** Check the `errors` array for specific validation requirements.
+
+### Email Already Registered
+
+```json
+{
+  "success": false,
+  "message": "El email ya está registrado"
+}
+```
+
+**Solution:** Use a different email address or log in with the existing account.
+
+## Testing the API
+
+The project includes comprehensive tests:
+
+```bash
+# Run all tests (97+ unit + E2E tests)
+npm test
+
+# Run tests with coverage report
+npm run test:coverage
+
+# Run tests in watch mode (development)
+npm run test:watch
+
+# Run only E2E tests
+npm run test:e2e
+
+# Run only unit tests
+npm run test:unit
+```
+
+## Swagger Documentation
+
+The API includes interactive Swagger documentation. Once the server is running, visit:
+
+```
+http://localhost:4000/api-docs
+```
+
+Swagger UI allows you to:
+- Explore all endpoints interactively
+- View request/response schemas
+- Test endpoints directly from your browser
+- See detailed parameter descriptions
+
+## Health Check
+
+Verify the API is running correctly:
+
+```bash
+curl http://localhost:4000/health
+```
+
+You should receive a health status response indicating the API and database connection status.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Authentication Deep Dive" icon="lock" href="/authentication">
+    Learn more about JWT authentication, token structure, and security
+  </Card>
+  <Card title="API Reference" icon="book" href="/api-reference">
+    Explore all available endpoints and their parameters
+  </Card>
+  <Card title="Calculations" icon="calculator" href="/calculations">
+    Learn how to perform power calculations and get recommendations
+  </Card>
+  <Card title="Error Handling" icon="triangle-exclamation" href="/errors">
+    Understand error responses and how to handle them
+  </Card>
+</CardGroup>

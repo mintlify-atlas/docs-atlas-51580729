@@ -1,0 +1,485 @@
+---
+title: Tractors
+description: Comprehensive guide to the Tractor resource in the MaqAgr API
+---
+
+Tractors are core agricultural machinery resources in the MaqAgr API. This resource manages the catalog of available tractors, including their specifications, capabilities, and availability status.
+
+## Overview
+
+The Tractor resource represents agricultural tractors with detailed specifications including engine power, traction capabilities, tire configurations, and operational status. Tractors are publicly accessible for browsing but require administrator privileges for modifications.
+
+### Key Features
+
+- Public catalog access for all tractors
+- Search and filter by brand, model, power range, and traction type
+- Availability tracking (available, maintenance, inactive)
+- Admin-only create, update, and delete operations
+- Soft delete implementation (status changes to inactive)
+
+## Data Model
+
+The Tractor model contains the following fields:
+
+<ResponseField name="tractor_id" type="integer" required>
+  Unique identifier for the tractor (auto-generated)
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Display name for the tractor
+</ResponseField>
+
+<ResponseField name="brand" type="string" required>
+  Manufacturer brand (e.g., "John Deere", "Massey Ferguson")
+</ResponseField>
+
+<ResponseField name="model" type="string" required>
+  Model identifier (e.g., "6130M", "7R 290")
+</ResponseField>
+
+<ResponseField name="engine_power_hp" type="number" required>
+  Engine power in horsepower (HP). Must be a positive number.
+</ResponseField>
+
+<ResponseField name="weight_kg" type="number">
+  Total weight in kilograms. Must be a positive number.
+</ResponseField>
+
+<ResponseField name="traction_force_kn" type="number">
+  Traction force in kilonewtons (kN)
+</ResponseField>
+
+<ResponseField name="traction_type" type="string" required>
+  Type of traction system. Allowed values: `4x2`, `4x4`, `track`
+</ResponseField>
+
+<ResponseField name="tire_type" type="string">
+  Tire type (e.g., "radial", "bias")
+</ResponseField>
+
+<ResponseField name="tire_width_mm" type="number">
+  Tire width in millimeters
+</ResponseField>
+
+<ResponseField name="tire_diameter_mm" type="number">
+  Tire diameter in millimeters
+</ResponseField>
+
+<ResponseField name="tire_pressure_psi" type="number">
+  Recommended tire pressure in PSI
+</ResponseField>
+
+<ResponseField name="status" type="string" default="available">
+  Current status. Allowed values: `available`, `maintenance`, `inactive`
+</ResponseField>
+
+## Common Operations
+
+### List All Tractors
+
+Retrieve all tractors with pagination support. This endpoint is publicly accessible.
+
+<CodeGroup>
+```javascript GET /api/tractors
+const response = await fetch('https://api.maqagr.com/api/tractors?limit=10&page=1', {
+  method: 'GET',
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
+const data = await response.json();
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    'https://api.maqagr.com/api/tractors',
+    params={'limit': 10, 'page': 1}
+)
+
+data = response.json()
+```
+</CodeGroup>
+
+**Response Example:**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "tractor_id": 1,
+      "name": "John Deere 6130M",
+      "brand": "John Deere",
+      "model": "6130M",
+      "engine_power_hp": 130,
+      "weight_kg": 5200,
+      "traction_force_kn": 45.5,
+      "traction_type": "4x4",
+      "tire_type": "radial",
+      "tire_width_mm": 540,
+      "tire_diameter_mm": 1600,
+      "tire_pressure_psi": 15,
+      "status": "available"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "total": 25,
+    "totalPages": 3
+  }
+}
+```
+
+### Get Tractor by ID
+
+Retrieve a specific tractor by its unique identifier.
+
+<CodeGroup>
+```javascript GET /api/tractors/:id
+const response = await fetch('https://api.maqagr.com/api/tractors/1', {
+  method: 'GET',
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
+const data = await response.json();
+```
+</CodeGroup>
+
+**Response Example:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "tractor_id": 1,
+    "name": "John Deere 6130M",
+    "brand": "John Deere",
+    "model": "6130M",
+    "engine_power_hp": 130,
+    "weight_kg": 5200,
+    "traction_force_kn": 45.5,
+    "traction_type": "4x4",
+    "tire_type": "radial",
+    "tire_width_mm": 540,
+    "tire_diameter_mm": 1600,
+    "tire_pressure_psi": 15,
+    "status": "available"
+  }
+}
+```
+
+### Search Tractors
+
+Search and filter tractors by multiple criteria including brand, model, power range, and traction type.
+
+<CodeGroup>
+```javascript GET /api/tractors/search
+const params = new URLSearchParams({
+  brand: 'John Deere',
+  minPower: 100,
+  maxPower: 200,
+  type: '4x4'
+});
+
+const response = await fetch(`https://api.maqagr.com/api/tractors/search?${params}`, {
+  method: 'GET',
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
+const data = await response.json();
+```
+</CodeGroup>
+
+**Response Example:**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "tractor_id": 1,
+      "brand": "John Deere",
+      "model": "6130M",
+      "engine_power_hp": 130,
+      "traction_type": "4x4",
+      "status": "available"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "total": 5,
+    "totalPages": 1
+  },
+  "filters": {
+    "brand": "John Deere",
+    "model": null,
+    "type": "4x4",
+    "minPower": 100,
+    "maxPower": 200
+  }
+}
+```
+
+### Get Available Tractors
+
+Retrieve only tractors with `available` status, sorted by engine power (descending).
+
+<CodeGroup>
+```javascript GET /api/tractors/available
+const response = await fetch('https://api.maqagr.com/api/tractors/available', {
+  method: 'GET',
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
+const data = await response.json();
+```
+</CodeGroup>
+
+### Create Tractor
+
+<Warning>
+  This operation requires administrator authentication. Include a valid JWT token with admin role.
+</Warning>
+
+Create a new tractor in the catalog.
+
+<CodeGroup>
+```javascript POST /api/tractors
+const response = await fetch('https://api.maqagr.com/api/tractors', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer YOUR_ADMIN_TOKEN'
+  },
+  body: JSON.stringify({
+    name: "John Deere 6130M",
+    brand: "John Deere",
+    model: "6130M",
+    engine_power_hp: 130,
+    weight_kg: 5200,
+    traction_force_kn: 45.5,
+    traction_type: "4x4",
+    tire_type: "radial",
+    tire_width_mm: 540,
+    tire_diameter_mm: 1600,
+    tire_pressure_psi: 15,
+    status: "available"
+  })
+});
+
+const data = await response.json();
+```
+</CodeGroup>
+
+**Response Example:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "tractor_id": 2,
+    "name": "John Deere 6130M",
+    "brand": "John Deere",
+    "model": "6130M",
+    "engine_power_hp": 130,
+    "weight_kg": 5200,
+    "traction_force_kn": 45.5,
+    "traction_type": "4x4",
+    "tire_type": "radial",
+    "tire_width_mm": 540,
+    "tire_diameter_mm": 1600,
+    "tire_pressure_psi": 15,
+    "status": "available"
+  }
+}
+```
+
+### Update Tractor
+
+<Warning>
+  This operation requires administrator authentication.
+</Warning>
+
+Update an existing tractor. Only provided fields are updated (partial update using COALESCE).
+
+<CodeGroup>
+```javascript PUT /api/tractors/:id
+const response = await fetch('https://api.maqagr.com/api/tractors/1', {
+  method: 'PUT',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer YOUR_ADMIN_TOKEN'
+  },
+  body: JSON.stringify({
+    engine_power_hp: 135,
+    status: "maintenance"
+  })
+});
+
+const data = await response.json();
+```
+</CodeGroup>
+
+### Delete Tractor
+
+<Warning>
+  This operation requires administrator authentication.
+</Warning>
+
+<Info>
+  Tractors use soft delete. The tractor's status is changed to `inactive` rather than being removed from the database.
+</Info>
+
+Delete a tractor from the active catalog.
+
+<CodeGroup>
+```javascript DELETE /api/tractors/:id
+const response = await fetch('https://api.maqagr.com/api/tractors/1', {
+  method: 'DELETE',
+  headers: {
+    'Authorization': 'Bearer YOUR_ADMIN_TOKEN'
+  }
+});
+
+const data = await response.json();
+```
+</CodeGroup>
+
+**Response Example:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "tractor_id": 1,
+    "status": "inactive"
+  }
+}
+```
+
+## Validation Rules
+
+When creating or updating tractors, the following validation rules apply:
+
+### Required Fields (Create)
+
+- `brand`: Must be a non-empty string
+- `model`: Must be a non-empty string
+- `engine_power_hp`: Required, must be a positive number
+- `traction_type`: Required, must be one of: `4x2`, `4x4`, `track`
+
+### Optional Fields
+
+- `name`: String (display name)
+- `weight_kg`: Positive number if provided
+- `traction_force_kn`: Number
+- `tire_type`: String
+- `tire_width_mm`: Positive number if provided
+- `tire_diameter_mm`: Positive number if provided
+- `tire_pressure_psi`: Positive number if provided
+- `status`: One of `available`, `maintenance`, `inactive` (defaults to `available`)
+
+### Validation Examples
+
+<CodeGroup>
+```json Valid Create Request
+{
+  "brand": "John Deere",
+  "model": "6130M",
+  "engine_power_hp": 130,
+  "traction_type": "4x4"
+}
+```
+
+```json Invalid Create Request
+{
+  "brand": "",
+  "model": "6130M",
+  "engine_power_hp": -10,
+  "traction_type": "invalid"
+}
+```
+</CodeGroup>
+
+**Validation Error Response:**
+
+```json
+{
+  "success": false,
+  "errors": [
+    "brand es requerido",
+    "engine_power_hp debe ser un número positivo",
+    "traction_type debe ser uno de: 4x2, 4x4, track"
+  ]
+}
+```
+
+## Error Responses
+
+### 400 Bad Request
+
+Returned when validation fails or invalid ID format is provided.
+
+```json
+{
+  "success": false,
+  "message": "ID de tractor inválido"
+}
+```
+
+### 401 Unauthorized
+
+Returned when authentication token is missing or invalid (admin operations).
+
+```json
+{
+  "success": false,
+  "message": "Token no proporcionado o inválido"
+}
+```
+
+### 403 Forbidden
+
+Returned when a non-admin user attempts admin operations.
+
+```json
+{
+  "success": false,
+  "message": "Acceso denegado. Se requiere rol de administrador"
+}
+```
+
+### 404 Not Found
+
+Returned when the specified tractor does not exist.
+
+```json
+{
+  "success": false,
+  "message": "Tractor no encontrado"
+}
+```
+
+## Related Resources
+
+- [Implements](/resources/implements) - Agricultural implements that can be paired with tractors
+- [Recommendations](/api-reference/recommendations) - Get tractor-implement recommendations
+- [API Reference](/api-reference/tractors) - Complete API endpoint documentation
+
+## Source Code References
+
+- Model: `src/models/Tractor.js`
+- Controller: `src/controllers/tractorController.js`
+- Routes: `src/routes/tractor.routes.js`
+- Validation: `src/middleware/validation.middleware.js`

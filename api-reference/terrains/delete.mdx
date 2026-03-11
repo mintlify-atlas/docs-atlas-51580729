@@ -1,0 +1,144 @@
+---
+title: 'Delete Terrain'
+openapi: 'DELETE /api/terrains/{id}'
+---
+
+<Warning>
+**Permanent Deletion**: This endpoint performs a hard delete (real deletion, not soft delete). The terrain will be permanently removed from the database and cannot be recovered.
+</Warning>
+
+<Note>
+**Ownership Validation**: You can only delete terrains that belong to your authenticated user account. Attempting to delete another user's terrain will return a 404 error.
+</Note>
+
+## Authentication Required
+
+This endpoint requires a valid JWT token in the Authorization header:
+
+```
+Authorization: Bearer <your_token>
+```
+
+## Path Parameters
+
+- **id** (integer, required): The terrain ID to delete
+
+## Response Codes
+
+- **200**: Terrain deleted successfully
+- **400**: Invalid terrain ID
+- **401**: Unauthorized (missing or invalid JWT token)
+- **404**: Terrain not found or does not belong to the authenticated user
+- **500**: Internal server error
+
+## Hard Delete vs Soft Delete
+
+Unlike tractors and implements which use soft delete (marking as inactive), terrains are permanently deleted from the database:
+
+```sql
+DELETE FROM terrain WHERE terrain_id = $1 RETURNING *
+```
+
+This is a real deletion - the record is completely removed and cannot be recovered.
+
+## Example Request
+
+```bash
+curl -X DELETE https://api.maqagr.com/api/terrains/1 \
+  -H "Authorization: Bearer your_jwt_token"
+```
+
+## Example Response
+
+```json
+{
+  "success": true,
+  "message": "Terreno eliminado exitosamente",
+  "data": {
+    "terrain_id": 1,
+    "user_id": 5,
+    "name": "Parcela Norte",
+    "altitude_meters": 2500,
+    "slope_percentage": 15,
+    "soil_type": "clay",
+    "temperature_celsius": 18,
+    "status": "active"
+  }
+}
+```
+
+## Error Response Example
+
+```json
+{
+  "success": false,
+  "message": "Terreno no encontrado"
+}
+```
+
+## Ownership Verification
+
+Before deleting, the endpoint verifies that the terrain belongs to the authenticated user:
+
+```javascript
+const existing = await Terrain.findByIdAndUser(id, userId);
+
+if (!existing) {
+  return res.status(404).json({
+    success: false,
+    message: "Terreno no encontrado",
+  });
+}
+```
+
+## Implementation Details
+
+From `terrainController.js:211-240`:
+
+```javascript
+export const deleteTerrain = asyncHandler(async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const userId = req.user.user_id;
+
+  if (Number.isNaN(id) || id <= 0) {
+    return res.status(400).json({
+      success: false,
+      message: "ID de terreno inválido",
+    });
+  }
+
+  // Verificar propiedad del terreno
+  const existing = await Terrain.findByIdAndUser(id, userId);
+
+  if (!existing) {
+    return res.status(404).json({
+      success: false,
+      message: "Terreno no encontrado",
+    });
+  }
+
+  // Eliminación real (no soft delete como en tractores/implementos)
+  const deleted = await Terrain.delete(id);
+
+  return res.json({
+    success: true,
+    message: "Terreno eliminado exitosamente",
+    data: deleted,
+  });
+});
+```
+
+From `Terrain.js:108-112`:
+
+```javascript
+// Delete terrain
+static async delete(id) {
+  const query = "DELETE FROM terrain WHERE terrain_id = $1 RETURNING *";
+  const result = await pool.query(query, [id]);
+  return result.rows[0];
+}
+```
+
+## Cache Invalidation
+
+Deleting a terrain invalidates both the terrains and recommendations caches, as the deleted terrain should no longer appear in lists or affect recommendations.

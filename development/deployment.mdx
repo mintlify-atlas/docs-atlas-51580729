@@ -1,0 +1,672 @@
+---
+title: Deployment
+description: Complete guide for deploying the MaqAgr API to production, including environment setup, database configuration, and Docker deployment
+---
+
+## Overview
+
+This guide covers everything needed to deploy the MaqAgr API to production, from environment configuration to database setup and containerization.
+
+## Environment Variables
+
+The API requires several environment variables to be configured. Create a `.env` file in the project root:
+
+### Required Variables
+
+<ParamField path="PORT" type="number" default="4000">
+  Port number where the Express server will listen
+</ParamField>
+
+<ParamField path="NODE_ENV" type="string" default="development">
+  Environment mode: `development`, `production`, or `test`
+  
+  Affects:
+  - Error detail exposure (hidden in production)
+  - Log verbosity (debug in dev, info in prod)
+  - CORS settings
+</ParamField>
+
+<ParamField path="DB_HOST" type="string" default="localhost">
+  PostgreSQL database host address
+</ParamField>
+
+<ParamField path="DB_PORT" type="number" default="5432">
+  PostgreSQL database port
+</ParamField>
+
+<ParamField path="DB_NAME" type="string" default="MaqAgr">
+  PostgreSQL database name
+</ParamField>
+
+<ParamField path="DB_USER" type="string" default="postgres">
+  PostgreSQL database user
+</ParamField>
+
+<ParamField path="DB_PASS" type="string" required>
+  PostgreSQL database password (REQUIRED)
+</ParamField>
+
+<ParamField path="JWT_SECRET" type="string" required>
+  Secret key for signing JWT tokens (min 32 characters recommended)
+  
+  Generate a strong secret:
+  ```bash
+  openssl rand -base64 32
+  ```
+</ParamField>
+
+<ParamField path="JWT_EXPIRES_IN" type="string" default="24h">
+  JWT token expiration time
+  
+  Examples: `1h`, `24h`, `7d`, `30d`
+</ParamField>
+
+<ParamField path="TEST_DB_NAME" type="string" default="maqagr_test">
+  Separate database for integration tests (optional)
+</ParamField>
+
+### Example .env File
+
+```bash .env
+# Server Configuration
+PORT=4000
+NODE_ENV=production
+
+# Database Configuration
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=MaqAgr
+DB_USER=postgres
+DB_PASS=your_secure_password_here
+
+# JWT Configuration
+JWT_SECRET=your_super_secure_jwt_secret_min_32_chars_recommended
+JWT_EXPIRES_IN=24h
+
+# Redis Configuration (optional)
+REDIS_HOST=localhost
+REDIS_PORT=6379
+```
+
+<Warning>
+**Security:**
+- Never commit `.env` files to version control
+- Use strong, randomly generated passwords and secrets
+- Rotate JWT secrets periodically in production
+- Use environment-specific values (separate dev/staging/prod)
+</Warning>
+
+## Database Setup
+
+### Prerequisites
+
+<Steps>
+  <Step title="Install PostgreSQL">
+    Install PostgreSQL 12 or higher:
+    
+    <CodeGroup>
+    ```bash Ubuntu/Debian
+    sudo apt update
+    sudo apt install postgresql postgresql-contrib
+    ```
+    
+    ```bash macOS
+    brew install postgresql@14
+    brew services start postgresql@14
+    ```
+    
+    ```bash Windows
+    # Download installer from postgresql.org
+    # Or use Chocolatey:
+    choco install postgresql
+    ```
+    </CodeGroup>
+  </Step>
+  
+  <Step title="Create Database">
+    Create the production database:
+    
+    ```bash
+    # Connect to PostgreSQL
+    sudo -u postgres psql
+    
+    # Create database
+    CREATE DATABASE MaqAgr;
+    
+    # Create user (optional)
+    CREATE USER maqagr_user WITH PASSWORD 'secure_password';
+    GRANT ALL PRIVILEGES ON DATABASE MaqAgr TO maqagr_user;
+    
+    # Exit
+    \q
+    ```
+  </Step>
+  
+  <Step title="Import Schema">
+    Import the database schema and initial data:
+    
+    ```bash
+    # From project root
+    psql -d MaqAgr -f docs/dbSetting/users_202601311817.sql
+    psql -d MaqAgr -f docs/dbSetting/tractor_202601311817.sql
+    psql -d MaqAgr -f docs/dbSetting/implement_202601311817.sql
+    psql -d MaqAgr -f docs/dbSetting/terrain_202601311817.sql
+    psql -d MaqAgr -f database/indexes.sql
+    ```
+    
+    <Info>
+    If you created a custom user, add the `-U` flag:
+    ```bash
+    psql -U maqagr_user -d MaqAgr -f docs/dbSetting/users_202601311817.sql
+    ```
+    </Info>
+  </Step>
+  
+  <Step title="Verify Tables">
+    Verify that tables were created:
+    
+    ```bash
+    psql -d MaqAgr
+    
+    # List all tables
+    \dt
+    
+    # Should show:
+    # - users
+    # - roles
+    # - tractors
+    # - implements
+    # - terrains
+    # - calculations
+    # - recommendations
+    ```
+  </Step>
+</Steps>
+
+### Database Indexes
+
+Ensure performance indexes are created:
+
+```sql database/indexes.sql
+-- User authentication
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_role_id ON users(role_id);
+
+-- Tractors
+CREATE INDEX idx_tractors_brand ON tractors(brand);
+CREATE INDEX idx_tractors_power ON tractors(power);
+
+-- Terrains
+CREATE INDEX idx_terrains_user_id ON terrains(user_id);
+CREATE INDEX idx_terrains_soil_type ON terrains(soil_type);
+
+-- Calculations
+CREATE INDEX idx_calculations_user_id ON calculations(user_id);
+CREATE INDEX idx_calculations_created_at ON calculations(created_at DESC);
+```
+
+## Redis Setup (Optional)
+
+Redis is used for caching and rate limiting:
+
+<Tabs>
+  <Tab title="Docker">
+    Use the provided `docker-compose.yml`:
+    
+    ```yaml docker-compose.yml
+    version: '3.8'
+    services:
+      redis:
+        image: redis:alpine
+        container_name: redis_cache
+        restart: always
+        ports:
+          - "6379:6379"
+        volumes:
+          - redis_data:/data
+    
+    volumes:
+      redis_data:
+    ```
+    
+    Start Redis:
+    ```bash
+    docker-compose up -d
+    ```
+  </Tab>
+  
+  <Tab title="Native">
+    <CodeGroup>
+    ```bash Ubuntu/Debian
+    sudo apt install redis-server
+    sudo systemctl start redis
+    sudo systemctl enable redis
+    ```
+    
+    ```bash macOS
+    brew install redis
+    brew services start redis
+    ```
+    
+    ```bash Windows
+    # Download from github.com/microsoftarchive/redis
+    # Or use WSL2 with Ubuntu instructions
+    ```
+    </CodeGroup>
+  </Tab>
+</Tabs>
+
+## Installation
+
+<Steps>
+  <Step title="Clone Repository">
+    ```bash
+    git clone https://github.com/David9604/BackMaqagr.git
+    cd BackMaqagr
+    ```
+  </Step>
+  
+  <Step title="Install Dependencies">
+    ```bash
+    npm install
+    ```
+  </Step>
+  
+  <Step title="Configure Environment">
+    ```bash
+    cp .env.example .env
+    # Edit .env with your production values
+    nano .env
+    ```
+  </Step>
+  
+  <Step title="Setup Database">
+    ```bash
+    # Create database and import schema (see Database Setup above)
+    createdb MaqAgr
+    psql -d MaqAgr -f docs/dbSetting/users_202601311817.sql
+    # ... import remaining SQL files
+    ```
+  </Step>
+  
+  <Step title="Start Server">
+    <CodeGroup>
+    ```bash Development
+    npm run start
+    ```
+    
+    ```bash Production
+    NODE_ENV=production npm start
+    ```
+    </CodeGroup>
+  </Step>
+</Steps>
+
+## Production Deployment
+
+### Using PM2 (Recommended)
+
+PM2 is a production process manager for Node.js:
+
+<Steps>
+  <Step title="Install PM2">
+    ```bash
+    npm install -g pm2
+    ```
+  </Step>
+  
+  <Step title="Start Application">
+    ```bash
+    pm2 start src/app.js --name maqagr-api
+    ```
+  </Step>
+  
+  <Step title="Configure Auto-Restart">
+    ```bash
+    # Save PM2 process list
+    pm2 save
+    
+    # Generate startup script
+    pm2 startup
+    ```
+  </Step>
+  
+  <Step title="Monitor">
+    ```bash
+    # View logs
+    pm2 logs maqagr-api
+    
+    # Monitor resources
+    pm2 monit
+    
+    # View process list
+    pm2 list
+    ```
+  </Step>
+</Steps>
+
+### PM2 Ecosystem File
+
+Create `ecosystem.config.js` for advanced configuration:
+
+```javascript ecosystem.config.js
+module.exports = {
+  apps: [{
+    name: 'maqagr-api',
+    script: './src/app.js',
+    instances: 2,
+    exec_mode: 'cluster',
+    env: {
+      NODE_ENV: 'production',
+      PORT: 4000
+    },
+    error_file: './logs/pm2-error.log',
+    out_file: './logs/pm2-out.log',
+    log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+    merge_logs: true,
+    max_memory_restart: '500M'
+  }]
+};
+```
+
+Deploy:
+```bash
+pm2 start ecosystem.config.js
+```
+
+## Docker Deployment
+
+Create a `Dockerfile` for containerized deployment:
+
+```dockerfile Dockerfile
+FROM node:24-alpine
+
+# Create app directory
+WORKDIR /usr/src/app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm ci --only=production
+
+# Copy application code
+COPY . .
+
+# Expose port
+EXPOSE 4000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:4000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+
+# Start application
+CMD ["node", "src/app.js"]
+```
+
+### Full Docker Compose
+
+```yaml docker-compose.yml
+version: '3.8'
+
+services:
+  api:
+    build: .
+    container_name: maqagr-api
+    restart: always
+    ports:
+      - "4000:4000"
+    environment:
+      - NODE_ENV=production
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=MaqAgr
+      - DB_USER=postgres
+      - DB_PASS=${DB_PASS}
+      - JWT_SECRET=${JWT_SECRET}
+      - REDIS_HOST=redis
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - maqagr-network
+
+  postgres:
+    image: postgres:14-alpine
+    container_name: maqagr-postgres
+    restart: always
+    environment:
+      - POSTGRES_DB=MaqAgr
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${DB_PASS}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docs/dbSetting:/docker-entrypoint-initdb.d
+    networks:
+      - maqagr-network
+
+  redis:
+    image: redis:alpine
+    container_name: maqagr-redis
+    restart: always
+    volumes:
+      - redis_data:/data
+    networks:
+      - maqagr-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  maqagr-network:
+    driver: bridge
+```
+
+Deploy:
+```bash
+# Build and start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f api
+
+# Stop all services
+docker-compose down
+```
+
+## Reverse Proxy (Nginx)
+
+Configure Nginx as reverse proxy:
+
+```nginx /etc/nginx/sites-available/maqagr-api
+server {
+    listen 80;
+    server_name api.maqagr.com;
+
+    # Redirect to HTTPS
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name api.maqagr.com;
+
+    # SSL certificates (use Let's Encrypt)
+    ssl_certificate /etc/letsencrypt/live/api.maqagr.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/api.maqagr.com/privkey.pem;
+
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+
+    # API proxy
+    location / {
+        proxy_pass http://localhost:4000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # Rate limiting
+    limit_req_zone $binary_remote_addr zone=api_limit:10m rate=10r/s;
+    limit_req zone=api_limit burst=20 nodelay;
+}
+```
+
+Enable site:
+```bash
+sudo ln -s /etc/nginx/sites-available/maqagr-api /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+## Health Checks
+
+The API includes a health check endpoint:
+
+```bash
+curl http://localhost:4000/health
+```
+
+Response:
+```json
+{
+  "status": "ok",
+  "timestamp": "2026-03-11T10:30:00.000Z",
+  "uptime": 3600,
+  "database": "connected",
+  "redis": "connected"
+}
+```
+
+## Monitoring & Logging
+
+### Log Files
+
+Logs are stored in the `logs/` directory:
+
+```
+logs/
+├── combined.log           # All logs
+├── error.log              # Errors only
+├── app-2026-03-11.log     # Daily rotation
+└── app-2026-03-10.log.gz  # Compressed archives
+```
+
+### Log Rotation
+
+Logs automatically rotate daily and keep 14 days of history.
+
+### Monitoring with PM2
+
+```bash
+# Real-time monitoring
+pm2 monit
+
+# CPU and memory usage
+pm2 status
+
+# Application logs
+pm2 logs maqagr-api --lines 100
+```
+
+## Security Checklist
+
+<AccordionGroup>
+  <Accordion title="Environment Variables">
+    - [ ] Use strong, randomly generated `JWT_SECRET` (min 32 chars)
+    - [ ] Use secure database password
+    - [ ] Set `NODE_ENV=production`
+    - [ ] Never commit `.env` to version control
+  </Accordion>
+
+  <Accordion title="Database">
+    - [ ] Use non-default database credentials
+    - [ ] Enable SSL for database connections in production
+    - [ ] Regular automated backups
+    - [ ] Restrict database access to API server only
+  </Accordion>
+
+  <Accordion title="API Server">
+    - [ ] Use HTTPS in production (SSL/TLS certificates)
+    - [ ] Enable rate limiting (already configured)
+    - [ ] Configure CORS for specific origins
+    - [ ] Keep dependencies updated (`npm audit`)
+    - [ ] Run as non-root user
+  </Accordion>
+
+  <Accordion title="Reverse Proxy">
+    - [ ] Configure Nginx/Apache with SSL
+    - [ ] Enable security headers
+    - [ ] Set up rate limiting at proxy level
+    - [ ] Configure firewall rules
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Database Connection Fails">
+    Check database credentials and connectivity:
+    ```bash
+    # Test PostgreSQL connection
+    psql -h localhost -U postgres -d MaqAgr
+    
+    # Check if PostgreSQL is running
+    sudo systemctl status postgresql
+    
+    # View API logs
+    pm2 logs maqagr-api
+    ```
+  </Accordion>
+
+  <Accordion title="Port Already in Use">
+    ```bash
+    # Find process using port 4000
+    lsof -i :4000
+    
+    # Kill process
+    kill -9 <PID>
+    
+    # Or change PORT in .env
+    ```
+  </Accordion>
+
+  <Accordion title="Redis Connection Fails">
+    ```bash
+    # Check if Redis is running
+    redis-cli ping
+    # Should return: PONG
+    
+    # Start Redis
+    sudo systemctl start redis
+    # Or with Docker:
+    docker-compose up -d redis
+    ```
+  </Accordion>
+
+  <Accordion title="High Memory Usage">
+    Configure PM2 memory limit:
+    ```bash
+    pm2 restart maqagr-api --max-memory-restart 500M
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Related Documentation
+
+<CardGroup cols={2}>
+  <Card title="Testing" icon="vial" href="/development/testing">
+    Run tests before deployment
+  </Card>
+  <Card title="Error Handling" icon="triangle-exclamation" href="/development/error-handling">
+    Monitor errors in production
+  </Card>
+</CardGroup>

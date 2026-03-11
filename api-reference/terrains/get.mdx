@@ -1,0 +1,113 @@
+---
+title: 'Get Terrain'
+openapi: 'GET /api/terrains/{id}'
+---
+
+<Note>
+**Ownership Validation**: You can only retrieve terrains that belong to your authenticated user account. Attempting to access another user's terrain will return a 404 error.
+</Note>
+
+## Authentication Required
+
+This endpoint requires a valid JWT token in the Authorization header:
+
+```
+Authorization: Bearer <your_token>
+```
+
+## Path Parameters
+
+- **id** (integer, required): The terrain ID to retrieve
+
+## Response Codes
+
+- **200**: Terrain found and returned successfully
+- **400**: Invalid terrain ID (not a valid integer or &lt;= 0)
+- **401**: Unauthorized (missing or invalid JWT token)
+- **404**: Terrain not found or does not belong to the authenticated user
+- **500**: Internal server error
+
+## Ownership Verification
+
+The endpoint uses `Terrain.findByIdAndUser(id, userId)` to ensure the terrain belongs to the authenticated user. This prevents users from accessing other users' terrains.
+
+## Example Request
+
+```bash
+curl -X GET https://api.maqagr.com/api/terrains/1 \
+  -H "Authorization: Bearer your_jwt_token"
+```
+
+## Example Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "terrain_id": 1,
+    "user_id": 5,
+    "name": "Parcela Norte",
+    "altitude_meters": 2500,
+    "slope_percentage": 15,
+    "soil_type": "clay",
+    "temperature_celsius": 18,
+    "status": "active"
+  }
+}
+```
+
+## Error Response Example
+
+```json
+{
+  "success": false,
+  "message": "Terreno no encontrado"
+}
+```
+
+## Implementation Details
+
+From `terrainController.js:60-85`:
+
+```javascript
+export const getTerrainById = asyncHandler(async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const userId = req.user.user_id;
+
+  if (Number.isNaN(id) || id <= 0) {
+    return res.status(400).json({
+      success: false,
+      message: "ID de terreno inválido",
+    });
+  }
+
+  // Verificar propiedad del terreno
+  const terrain = await Terrain.findByIdAndUser(id, userId);
+
+  if (!terrain) {
+    return res.status(404).json({
+      success: false,
+      message: "Terreno no encontrado",
+    });
+  }
+
+  return res.json({
+    success: true,
+    data: terrain,
+  });
+});
+```
+
+From `Terrain.js:29-37`:
+
+```javascript
+// Find terrain by ID and User ID (ownership verification)
+static async findByIdAndUser(id, userId) {
+  const query = `
+    SELECT * FROM terrain 
+    WHERE terrain_id = $1 AND user_id = $2
+  `;
+  const result = await pool.query(query, [id, userId]);
+  return result.rows[0];
+}
+```

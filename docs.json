@@ -1,122 +1,132 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "MaqAgr API",
+  "theme": "sequoia",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#94cb04",
+    "light": "#545454",
+    "dark": "#94cb04"
   },
-  "favicon": "/favicon.svg",
+  "favicon": "https://media.brand.dev/288cc7c4-5cef-4376-950b-bdf0083eedae.png",
+  "logo": {
+    "light": "/logo.png",
+    "dark": "/logo.png"
+  },
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/David9604/BackMaqagr"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/David9604/BackMaqagr"
+    }
+  },
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "Documentation",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "Get Started",
             "pages": [
-              "index",
+              "introduction",
               "quickstart",
-              "development"
+              "authentication"
             ]
           },
           {
-            "group": "Customization",
+            "group": "Core Resources",
             "pages": [
-              "essentials/settings",
-              "essentials/navigation"
+              "resources/tractors",
+              "resources/implements",
+              "resources/terrains"
             ]
           },
           {
-            "group": "Writing content",
+            "group": "Advanced Features",
             "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
+              "features/calculations",
+              "features/recommendations"
             ]
           },
           {
-            "group": "AI tools",
+            "group": "Development",
             "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "development/testing",
+              "development/utilities",
+              "development/error-handling",
+              "development/deployment"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "API Reference",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "Authentication",
             "pages": [
-              "api-reference/introduction"
+              "api-reference/auth/register",
+              "api-reference/auth/login",
+              "api-reference/auth/profile"
             ]
           },
           {
-            "group": "Endpoint examples",
+            "group": "Tractors",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "api-reference/tractors/list",
+              "api-reference/tractors/get",
+              "api-reference/tractors/create",
+              "api-reference/tractors/update",
+              "api-reference/tractors/delete"
+            ]
+          },
+          {
+            "group": "Implements",
+            "pages": [
+              "api-reference/implements/list",
+              "api-reference/implements/get",
+              "api-reference/implements/create",
+              "api-reference/implements/update",
+              "api-reference/implements/delete"
+            ]
+          },
+          {
+            "group": "Terrains",
+            "pages": [
+              "api-reference/terrains/list",
+              "api-reference/terrains/get",
+              "api-reference/terrains/create",
+              "api-reference/terrains/update",
+              "api-reference/terrains/delete"
+            ]
+          },
+          {
+            "group": "Calculations",
+            "pages": [
+              "api-reference/calculations/power-loss",
+              "api-reference/calculations/minimum-power"
+            ]
+          },
+          {
+            "group": "Recommendations",
+            "pages": [
+              "api-reference/recommendations/generate"
+            ]
+          },
+          {
+            "group": "Roles",
+            "pages": [
+              "api-reference/roles/list",
+              "api-reference/roles/get",
+              "api-reference/roles/create",
+              "api-reference/roles/update"
             ]
           }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
-  "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
-    }
-  },
-  "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
-  },
-  "footer": {
-    "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
-    }
+    ]
   }
 }

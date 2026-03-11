@@ -1,0 +1,545 @@
+---
+title: Error Handling
+description: Comprehensive guide to error handling patterns, middleware, and response formats in the MaqAgr API
+---
+
+## Overview
+
+The MaqAgr API implements a centralized error handling system that ensures consistent error responses across all endpoints. All errors follow the **JSend specification** and are logged with full context for debugging.
+
+## Error Response Format
+
+All API errors follow the JSend standard:
+
+### Production Format
+
+```json
+{
+  "success": false,
+  "message": "Descripción del error"
+}
+```
+
+### Development Format
+
+In development mode (`NODE_ENV=development`), additional debug information is included:
+
+```json
+{
+  "success": false,
+  "message": "Descripción del error",
+  "error": {
+    "name": "ValidationError",
+    "message": "Detalle técnico del error",
+    "stack": "Error stack trace completo",
+    "code": "23505"
+  }
+}
+```
+
+<Warning>
+Stack traces and internal error details are **never exposed in production** for security reasons.
+</Warning>
+
+## HTTP Status Codes
+
+The API uses standard HTTP status codes consistently:
+
+| Code | Name | Usage |
+|------|------|-------|
+| **200** | OK | Successful GET, PUT, PATCH requests |
+| **201** | Created | Successful POST requests that create resources |
+| **204** | No Content | Successful DELETE requests |
+| **400** | Bad Request | Validation errors, malformed requests |
+| **401** | Unauthorized | Missing or invalid authentication token |
+| **403** | Forbidden | Valid token but insufficient permissions |
+| **404** | Not Found | Resource doesn't exist |
+| **409** | Conflict | Duplicate resource (e.g., email already exists) |
+| **500** | Internal Server Error | Unexpected server errors |
+
+## Error Middleware
+
+Location: `src/middleware/error.middleware.js`
+
+### Architecture
+
+The error handling system consists of three main components:
+
+1. **404 Handler** - Catches requests to non-existent routes
+2. **Global Error Handler** - Processes all thrown errors
+3. **AsyncHandler Wrapper** - Eliminates try-catch boilerplate
+
+### 404 Not Found Handler
+
+Automatically handles requests to non-existent routes:
+
+```javascript
+import { notFound } from './middleware/error.middleware.js';
+
+// In app.js - after all routes
+app.use(notFound);
+```
+
+**Response Example:**
+```json
+{
+  "success": false,
+  "message": "La ruta /api/invalid/route no existe en este servidor"
+}
+```
+
+### Global Error Handler
+
+Centralized error processing with intelligent detection:
+
+```javascript
+import { errorHandler } from './middleware/error.middleware.js';
+
+// In app.js - last middleware
+app.use(errorHandler);
+```
+
+**Features:**
+- Automatic JWT error detection (expired, invalid tokens)
+- PostgreSQL error code mapping
+- Contextual logging (4xx = warn, 5xx = error)
+- Request correlation via `request-id`
+- User context tracking (if authenticated)
+
+### Error Types Handled
+
+<AccordionGroup>
+  <Accordion title="JWT Errors">
+    **JsonWebTokenError** → 401 Unauthorized
+    ```json
+    {
+      "success": false,
+      "message": "Token inválido"
+    }
+    ```
+
+    **TokenExpiredError** → 401 Unauthorized
+    ```json
+    {
+      "success": false,
+      "message": "Token expirado"
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="PostgreSQL Errors">
+    Common PostgreSQL error codes are automatically mapped:
+
+    | Code | Status | Message |
+    |------|--------|----------|
+    | 23505 | 409 | Ya existe un registro con estos datos |
+    | 23503 | 400 | Referencia a un registro que no existe |
+    | 23502 | 400 | Falta un campo obligatorio |
+    | 22P02 | 400 | Formato de datos inválido |
+    | 42P01 | 500 | Error de configuración de base de datos |
+
+    **Example:**
+    ```json
+    {
+      "success": false,
+      "message": "Ya existe un registro con estos datos"
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Validation Errors">
+    **ValidationError** → 400 Bad Request
+
+    Single error:
+    ```json
+    {
+      "success": false,
+      "message": "Error de validación"
+    }
+    ```
+
+    Multiple errors:
+    ```json
+    {
+      "success": false,
+      "message": "Error de validación",
+      "errors": [
+        "El email es inválido",
+        "La contraseña debe tener al menos 8 caracteres"
+      ]
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Cast Errors">
+    **CastError** → 400 Bad Request
+
+    Occurs when invalid ID format is provided:
+    ```json
+    {
+      "success": false,
+      "message": "Formato de ID inválido"
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Custom Error Classes
+
+Location: `src/utils/errors.util.js` (re-exported from middleware)
+
+### AppError
+
+Generic application error with custom status code:
+
+```javascript
+import { AppError } from './middleware/error.middleware.js';
+
+throw new AppError('Operación no permitida', 403);
+throw new AppError('Recurso no disponible', 503);
+```
+
+### ValidationError
+
+For validation failures with detailed error list:
+
+```javascript
+import { ValidationError } from './middleware/error.middleware.js';
+
+const errors = [
+  'El email es inválido',
+  'La contraseña debe contener una mayúscula'
+];
+
+throw new ValidationError(errors);
+```
+
+### AuthenticationError
+
+For authentication failures (401):
+
+```javascript
+import { AuthenticationError } from './middleware/error.middleware.js';
+
+if (!user) {
+  throw new AuthenticationError('Credenciales inválidas');
+}
+
+if (tokenExpired) {
+  throw new AuthenticationError('Token expirado');
+}
+```
+
+### AuthorizationError
+
+For permission failures (403):
+
+```javascript
+import { AuthorizationError } from './middleware/error.middleware.js';
+
+if (user.role_id !== ADMIN_ROLE) {
+  throw new AuthorizationError('Se requiere rol de administrador');
+}
+```
+
+### NotFoundError
+
+For missing resources (404):
+
+```javascript
+import { NotFoundError } from './middleware/error.middleware.js';
+
+const tractor = await getTractorById(id);
+if (!tractor) {
+  throw new NotFoundError('Tractor no encontrado');
+}
+```
+
+## AsyncHandler Wrapper
+
+Eliminates the need for try-catch blocks in route handlers:
+
+### Without AsyncHandler
+
+```javascript
+export const getTractor = async (req, res, next) => {
+  try {
+    const tractor = await Tractor.findById(req.params.id);
+    if (!tractor) {
+      return res.status(404).json({ success: false, message: 'Not found' });
+    }
+    return res.status(200).json({ success: true, data: tractor });
+  } catch (error) {
+    next(error);
+  }
+};
+```
+
+### With AsyncHandler
+
+```javascript
+import { asyncHandler } from './middleware/error.middleware.js';
+import { successResponse } from './utils/response.util.js';
+import { NotFoundError } from './middleware/error.middleware.js';
+
+export const getTractor = asyncHandler(async (req, res) => {
+  const tractor = await Tractor.findById(req.params.id);
+  
+  if (!tractor) {
+    throw new NotFoundError('Tractor no encontrado');
+  }
+  
+  return successResponse(res, tractor, 'Tractor obtenido exitosamente');
+});
+```
+
+<Info>
+Any error thrown inside `asyncHandler` is automatically caught and passed to the error middleware.
+</Info>
+
+## Error Logging
+
+The error middleware includes intelligent logging based on severity:
+
+### 4xx Errors (Client Errors)
+
+Logged at **WARN** level:
+
+```javascript
+logger.warn('[400] Error de validación', {
+  requestId: 'abc-123',
+  method: 'POST',
+  url: '/api/tractors',
+  userId: 42,
+  userEmail: 'user@example.com',
+  ip: '192.168.1.1',
+  errorName: 'ValidationError'
+});
+```
+
+### 5xx Errors (Server Errors)
+
+Logged at **ERROR** level with full stack trace:
+
+```javascript
+logger.error('[500] Error interno del servidor', {
+  requestId: 'abc-123',
+  method: 'GET',
+  url: '/api/calculations/power',
+  userId: 42,
+  ip: '192.168.1.1',
+  errorName: 'Error',
+  stack: 'Error: Database connection lost\n    at ....',
+  pgQuery: 'SELECT * FROM tractors WHERE id = $1',
+  pgDetail: 'Connection terminated unexpectedly'
+});
+```
+
+## Usage Examples
+
+### Example 1: Controller with Validation
+
+```javascript
+import { asyncHandler } from '../middleware/error.middleware.js';
+import { validationErrorResponse, createdResponse } from '../utils/response.util.js';
+import { isValidEmail, isValidPassword } from '../utils/validators.util.js';
+
+export const register = asyncHandler(async (req, res) => {
+  const { name, email, password } = req.body;
+  
+  // Validate input
+  const errors = [];
+  if (!isValidEmail(email)) errors.push('Email inválido');
+  if (!isValidPassword(password)) errors.push('Contraseña débil');
+  
+  if (errors.length > 0) {
+    return validationErrorResponse(res, errors);
+  }
+  
+  // Create user (any errors automatically handled)
+  const user = await User.create({ name, email, password });
+  const token = generateToken(user);
+  
+  return createdResponse(res, { user, token }, 'Usuario registrado');
+});
+```
+
+### Example 2: Custom Error Throwing
+
+```javascript
+import { asyncHandler, NotFoundError, AuthorizationError } from '../middleware/error.middleware.js';
+import { successResponse } from '../utils/response.util.js';
+
+export const deleteTractor = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user.user_id;
+  
+  // Check if tractor exists
+  const tractor = await Tractor.findById(id);
+  if (!tractor) {
+    throw new NotFoundError('Tractor no encontrado');
+  }
+  
+  // Check ownership
+  if (tractor.owner_id !== userId && req.user.role_id !== ADMIN_ROLE) {
+    throw new AuthorizationError('No tienes permiso para eliminar este tractor');
+  }
+  
+  // Delete tractor
+  await Tractor.delete(id);
+  
+  return successResponse(res, null, 'Tractor eliminado exitosamente');
+});
+```
+
+### Example 3: Database Error Handling
+
+```javascript
+import { asyncHandler, AppError } from '../middleware/error.middleware.js';
+import { conflictResponse, successResponse } from '../utils/response.util.js';
+import { pool } from '../config/db.js';
+
+export const createTerrain = asyncHandler(async (req, res) => {
+  const { name, soil_type, slope } = req.body;
+  
+  try {
+    const result = await pool.query(
+      'INSERT INTO terrains (name, soil_type, slope, user_id) VALUES ($1, $2, $3, $4) RETURNING *',
+      [name, soil_type, slope, req.user.user_id]
+    );
+    
+    return successResponse(res, result.rows[0], 'Terreno creado');
+  } catch (error) {
+    // PostgreSQL unique constraint violation
+    if (error.code === '23505') {
+      return conflictResponse(res, 'Ya existe un terreno con ese nombre');
+    }
+    
+    // Re-throw for global error handler
+    throw error;
+  }
+});
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use Custom Error Classes">
+    Prefer custom error classes over generic Error:
+    ```javascript
+    // Good
+    throw new NotFoundError('Recurso no encontrado');
+    
+    // Avoid
+    const error = new Error('Not found');
+    error.statusCode = 404;
+    throw error;
+    ```
+  </Accordion>
+
+  <Accordion title="Wrap All Async Routes">
+    Always use `asyncHandler` for async route handlers:
+    ```javascript
+    // Good
+    export const myRoute = asyncHandler(async (req, res) => { ... });
+    
+    // Avoid
+    export const myRoute = async (req, res, next) => {
+      try { ... } catch (error) { next(error); }
+    };
+    ```
+  </Accordion>
+
+  <Accordion title="Validate Early">
+    Validate input before processing:
+    ```javascript
+    export const createResource = asyncHandler(async (req, res) => {
+      // Validate first
+      if (!isValidEmail(email)) {
+        return validationErrorResponse(res, 'Email inválido');
+      }
+      
+      // Then process
+      const result = await Resource.create(req.body);
+      return createdResponse(res, result);
+    });
+    ```
+  </Accordion>
+
+  <Accordion title="Use Response Utilities">
+    Always use standardized response functions:
+    ```javascript
+    // Good
+    return successResponse(res, data, message);
+    return notFoundResponse(res, 'Not found');
+    
+    // Avoid
+    return res.status(200).json({ success: true, data });
+    return res.status(404).json({ success: false, message: 'Not found' });
+    ```
+  </Accordion>
+
+  <Accordion title="Log with Context">
+    Include relevant metadata in error logs:
+    ```javascript
+    logger.error('Payment processing failed', {
+      userId: user.id,
+      amount: payment.amount,
+      paymentId: payment.id,
+      error: err.message
+    });
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Testing Error Handling
+
+Example test for error scenarios:
+
+```javascript
+import { describe, it, expect } from '@jest/globals';
+import { request } from './helpers/testHelpers.js';
+
+describe('Error Handling', () => {
+  it('should return 404 for non-existent resource', async () => {
+    const res = await request
+      .get('/api/tractors/999999')
+      .set('Authorization', `Bearer ${validToken}`);
+    
+    expect(res.status).toBe(404);
+    expect(res.body.success).toBe(false);
+    expect(res.body.message).toContain('no encontrado');
+  });
+  
+  it('should return 401 for invalid token', async () => {
+    const res = await request
+      .get('/api/auth/profile')
+      .set('Authorization', 'Bearer invalid_token');
+    
+    expect(res.status).toBe(401);
+    expect(res.body.success).toBe(false);
+    expect(res.body.message).toBe('Token inválido');
+  });
+  
+  it('should return 400 for validation errors', async () => {
+    const res = await request
+      .post('/api/auth/register')
+      .send({ email: 'invalid', password: '123' });
+    
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+    expect(res.body).toHaveProperty('errors');
+  });
+});
+```
+
+## Related Documentation
+
+<CardGroup cols={2}>
+  <Card title="Utilities" icon="wrench" href="/development/utilities">
+    Response utilities and validators
+  </Card>
+  <Card title="Testing" icon="vial" href="/development/testing">
+    Testing error scenarios
+  </Card>
+</CardGroup>

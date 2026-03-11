@@ -1,0 +1,182 @@
+---
+title: 'Create Role'
+api: 'POST /api/roles'
+description: 'Create a new role in the system (Admin only)'
+---
+
+## Overview
+
+Creates a new role in the system. This endpoint is restricted to administrators only.
+
+<Warning>
+  **Admin Access Required**: This endpoint requires administrator privileges. Regular users will receive a 403 Forbidden error.
+</Warning>
+
+## Authentication
+
+Requires JWT authentication token with admin role in the Authorization header.
+
+```bash
+Authorization: Bearer <admin_token>
+```
+
+## Request Body
+
+<ParamField body="role_name" type="string" required>
+  Name of the role. Must be unique and at least 2 characters long.
+</ParamField>
+
+<ParamField body="description" type="string">
+  Description of the role and its permissions.
+</ParamField>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful.
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Success message.
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="role" type="object">
+      The created role object.
+      <Expandable title="properties">
+        <ResponseField name="role_id" type="number">
+          Unique role identifier
+        </ResponseField>
+        <ResponseField name="role_name" type="string">
+          Role name
+        </ResponseField>
+        <ResponseField name="description" type="string">
+          Role description
+        </ResponseField>
+        <ResponseField name="status" type="string">
+          Role status (always "active" on creation)
+        </ResponseField>
+        <ResponseField name="created_at" type="string">
+          Creation timestamp
+        </ResponseField>
+        <ResponseField name="updated_at" type="string">
+          Last update timestamp
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X POST https://api.maqagr.com/api/roles \
+  -H "Authorization: Bearer ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "role_name": "moderator",
+    "description": "Moderador del sistema"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.maqagr.com/api/roles', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${adminToken}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    role_name: 'moderator',
+    description: 'Moderador del sistema'
+  })
+});
+
+const data = await response.json();
+```
+
+```python Python
+import requests
+
+response = requests.post(
+  'https://api.maqagr.com/api/roles',
+  headers={
+    'Authorization': f'Bearer {admin_token}',
+    'Content-Type': 'application/json'
+  },
+  json={
+    'role_name': 'moderator',
+    'description': 'Moderador del sistema'
+  }
+)
+
+data = response.json()
+```
+</RequestExample>
+
+<ResponseExample>
+```json 201 - Success
+{
+  "success": true,
+  "message": "Rol creado exitosamente",
+  "data": {
+    "role": {
+      "role_id": 3,
+      "role_name": "moderator",
+      "description": "Moderador del sistema",
+      "status": "active",
+      "created_at": "2024-03-11T20:00:00.000Z",
+      "updated_at": "2024-03-11T20:00:00.000Z"
+    }
+  }
+}
+```
+
+```json 400 - Missing Role Name
+{
+  "success": false,
+  "message": "El nombre del rol es requerido"
+}
+```
+
+```json 400 - Name Too Short
+{
+  "success": false,
+  "message": "El nombre del rol debe tener al menos 2 caracteres"
+}
+```
+
+```json 401 - Unauthorized
+{
+  "success": false,
+  "message": "Token no proporcionado o inválido"
+}
+```
+
+```json 403 - Forbidden
+{
+  "success": false,
+  "message": "Acceso denegado - se requiere rol de administrador"
+}
+```
+
+```json 409 - Duplicate Role Name
+{
+  "success": false,
+  "message": "Ya existe un rol con ese nombre"
+}
+```
+</ResponseExample>
+
+## Validation Rules
+
+- **role_name** must be provided and unique
+- **role_name** must be at least 2 characters long
+- User must have administrator role
+- Role name is case-sensitive
+
+## Source Code Reference
+
+- Route: `src/routes/role.routes.js:179`
+- Controller: `src/controllers/roleController.js:68`
+- Middleware: `src/middleware/auth.middleware.js` (isAdmin)

@@ -1,0 +1,482 @@
+---
+title: 'Update Implement'
+description: 'Modify an existing agricultural implement in the catalog (Admin only)'
+---
+
+# Update Implement
+
+Update the details of an existing agricultural implement. This endpoint uses partial updates (COALESCE), meaning you only need to include the fields you want to change.
+
+<Warning>
+**Authentication Required**: This endpoint requires a valid JWT Bearer token with administrator privileges (`role_id: 1`).
+</Warning>
+
+## Endpoint
+
+```
+PUT /api/implements/{id}
+```
+
+## Path Parameters
+
+<ParamField path="id" type="integer" required>
+  The unique identifier of the implement to update
+</ParamField>
+
+## Authentication
+
+Include your JWT token in the Authorization header:
+
+```http
+Authorization: Bearer <your_jwt_token>
+```
+
+## Request Body
+
+All fields are optional. Only include the fields you want to update.
+
+<ParamField body="implement_name" type="string">
+  Name of the implement
+  
+  **Validation**: Cannot be empty if provided
+</ParamField>
+
+<ParamField body="brand" type="string">
+  Manufacturer brand name
+  
+  **Validation**: Cannot be empty if provided
+</ParamField>
+
+<ParamField body="power_requirement_hp" type="number">
+  Required horsepower (HP) to operate the implement
+  
+  **Validation**: Must be a positive number if provided
+</ParamField>
+
+<ParamField body="working_width_m" type="number">
+  Working width in meters
+  
+  **Validation**: Must be a positive number if provided
+</ParamField>
+
+<ParamField body="implement_type" type="string">
+  Type of implement. Must be one of:
+  - `plow`
+  - `harrow`
+  - `seeder`
+  - `sprayer`
+  - `harvester`
+  - `cultivator`
+  - `mower`
+  - `trailer`
+  - `other`
+</ParamField>
+
+<ParamField body="soil_type" type="string">
+  Compatible soil type(s)
+  
+  **Example**: "Loam", "Clay", "All"
+</ParamField>
+
+<ParamField body="working_depth_cm" type="number">
+  Working depth in centimeters
+  
+  **Validation**: Must be a positive number if provided
+</ParamField>
+
+<ParamField body="weight_kg" type="number">
+  Implement weight in kilograms
+  
+  **Validation**: Must be a positive number if provided
+</ParamField>
+
+<ParamField body="status" type="string">
+  Current status. Must be one of:
+  - `available`
+  - `maintenance`
+  - `inactive`
+</ParamField>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Indicates if the update was successful
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Success or error message
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  The updated implement object with all current field values
+</ResponseField>
+
+## Examples
+
+### Update Power Requirement and Working Depth
+
+<CodeGroup>
+```bash cURL
+curl -X PUT http://localhost:4000/api/implements/1 \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -d '{
+    "power_requirement_hp": 90,
+    "working_depth_cm": 35
+  }'
+```
+
+```javascript JavaScript
+const token = 'your_jwt_token_here';
+const implementId = 1;
+
+const response = await fetch(`http://localhost:4000/api/implements/${implementId}`, {
+  method: 'PUT',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  },
+  body: JSON.stringify({
+    power_requirement_hp: 90,
+    working_depth_cm: 35
+  })
+});
+
+const data = await response.json();
+console.log('Updated implement:', data.data);
+```
+
+```python Python
+import requests
+
+token = 'your_jwt_token_here'
+implement_id = 1
+
+response = requests.put(
+    f'http://localhost:4000/api/implements/{implement_id}',
+    headers={
+        'Content-Type': 'application/json',
+        'Authorization': f'Bearer {token}'
+    },
+    json={
+        'power_requirement_hp': 90,
+        'working_depth_cm': 35
+    }
+)
+
+data = response.json()
+print(f"Updated: {data['message']}")
+```
+</CodeGroup>
+
+### Change Status to Maintenance
+
+<CodeGroup>
+```bash cURL
+curl -X PUT http://localhost:4000/api/implements/3 \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -d '{"status": "maintenance"}'
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:4000/api/implements/3', {
+  method: 'PUT',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  },
+  body: JSON.stringify({
+    status: 'maintenance'
+  })
+});
+
+const result = await response.json();
+```
+
+```python Python
+response = requests.put(
+    'http://localhost:4000/api/implements/3',
+    headers={'Authorization': f'Bearer {token}'},
+    json={'status': 'maintenance'}
+)
+```
+</CodeGroup>
+
+### Update Multiple Fields
+
+<CodeGroup>
+```bash cURL
+curl -X PUT http://localhost:4000/api/implements/5 \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -d '{
+    "implement_name": "Sembradora mejorada 8 hileras",
+    "power_requirement_hp": 70,
+    "working_width_m": 2.6,
+    "soil_type": "All",
+    "weight_kg": 620
+  }'
+```
+
+```javascript JavaScript
+const updates = {
+  implement_name: 'Sembradora mejorada 8 hileras',
+  power_requirement_hp: 70,
+  working_width_m: 2.6,
+  soil_type: 'All',
+  weight_kg: 620
+};
+
+const response = await fetch('http://localhost:4000/api/implements/5', {
+  method: 'PUT',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  },
+  body: JSON.stringify(updates)
+});
+```
+
+```python Python
+updates = {
+    'implement_name': 'Sembradora mejorada 8 hileras',
+    'power_requirement_hp': 70,
+    'working_width_m': 2.6,
+    'soil_type': 'All',
+    'weight_kg': 620
+}
+
+response = requests.put(
+    'http://localhost:4000/api/implements/5',
+    headers={'Authorization': f'Bearer {token}'},
+    json=updates
+)
+```
+</CodeGroup>
+
+### Response Example (200 OK)
+
+```json
+{
+  "success": true,
+  "message": "Implemento actualizado exitosamente",
+  "data": {
+    "implement_id": 1,
+    "implement_name": "3-body disc plow",
+    "brand": "Baldan",
+    "power_requirement_hp": 90,
+    "working_width_m": 0.9,
+    "soil_type": "Loam",
+    "working_depth_cm": 35,
+    "weight_kg": 320,
+    "implement_type": "plow",
+    "status": "available",
+    "registration_date": "2026-01-15T10:00:00.000Z"
+  }
+}
+```
+
+<Info>
+The response includes the complete implement object with all fields, not just the fields that were updated.
+</Info>
+
+## Error Responses
+
+### Invalid ID (400)
+
+```json
+{
+  "success": false,
+  "message": "ID de implemento inválido"
+}
+```
+
+### Validation Error (400)
+
+```json
+{
+  "success": false,
+  "message": "Errores de validación",
+  "errors": [
+    "power_requirement_hp debe ser un número positivo",
+    "implement_type debe ser uno de: plow, harrow, seeder, sprayer, harvester, cultivator, mower, trailer, other"
+  ]
+}
+```
+
+### Unauthorized (401)
+
+```json
+{
+  "success": false,
+  "message": "Token inválido o expirado"
+}
+```
+
+### Forbidden - Not Admin (403)
+
+```json
+{
+  "success": false,
+  "message": "Acceso denegado: se requiere rol de administrador"
+}
+```
+
+### Not Found (404)
+
+```json
+{
+  "success": false,
+  "message": "Implemento no encontrado"
+}
+```
+
+### Internal Server Error (500)
+
+```json
+{
+  "success": false,
+  "message": "Error al actualizar implemento"
+}
+```
+
+## Partial Updates (COALESCE)
+
+This endpoint uses PostgreSQL's `COALESCE` function for partial updates. This means:
+
+- **Only send fields you want to change** - Other fields remain unchanged
+- **Empty request body** - No changes are made (but still returns 200 OK)
+- **Null values** - Interpreted as "no change", not as setting the field to null
+
+### Example: Update Only Status
+
+If you only want to change the status from `available` to `maintenance`:
+
+```json
+{
+  "status": "maintenance"
+}
+```
+
+All other fields (`implement_name`, `power_requirement_hp`, etc.) remain unchanged.
+
+### SQL Implementation
+
+The update query (from `src/models/Implement.js:62`):
+
+```sql
+UPDATE implement 
+SET implement_name = COALESCE($1, implement_name),
+    brand = COALESCE($2, brand),
+    power_requirement_hp = COALESCE($3, power_requirement_hp),
+    working_width_m = COALESCE($4, working_width_m),
+    soil_type = COALESCE($5, soil_type),
+    working_depth_cm = COALESCE($6, working_depth_cm),
+    weight_kg = COALESCE($7, weight_kg),
+    implement_type = COALESCE($8, implement_type),
+    status = COALESCE($9, status)
+WHERE implement_id = $10
+RETURNING *
+```
+
+`COALESCE($1, implement_name)` means: "Use $1 if provided, otherwise keep the current value of implement_name".
+
+## Validation Rules
+
+### Field Validation
+
+When updating, fields are validated only if provided:
+
+- **String fields** cannot be empty if provided
+- **Numeric fields** must be positive if provided
+- **Enum fields** (`implement_type`, `status`) must be valid values
+
+### Implement Type Values
+
+```
+plow, harrow, seeder, sprayer, harvester, cultivator, mower, trailer, other
+```
+
+### Status Values
+
+```
+available, maintenance, inactive
+```
+
+## Implementation Notes
+
+- **Source**: `src/routes/implement.routes.js:426` - Route definition
+- **Controller**: `src/controllers/implementController.js:205` - `updateImplement` function
+- **Model**: `src/models/Implement.js:49` - `update(id, implementData)` method
+- **Validation**: Fields are validated only if provided in request body
+- **Middleware Chain**:
+  1. `verifyTokenMiddleware` - Validates JWT token
+  2. `isAdmin` - Checks for admin role
+  3. `validateImplement` - Validates provided fields
+  4. `updateImplement` - Updates the implement
+- **Cache Invalidation**: Invalidates both `*implements*` and `*recommendations*` cache patterns
+
+<Warning>
+Updating implements that are referenced in existing recommendations will invalidate recommendation caches to ensure data consistency.
+</Warning>
+
+## Common Update Scenarios
+
+### Mark as Under Maintenance
+
+```bash
+curl -X PUT http://localhost:4000/api/implements/{id} \
+  -H "Authorization: Bearer {token}" \
+  -d '{"status": "maintenance"}'
+```
+
+### Adjust Power Requirements
+
+After field testing, adjust the power requirement:
+
+```json
+{
+  "power_requirement_hp": 95
+}
+```
+
+### Update Specifications
+
+Update technical specifications after recalibration:
+
+```json
+{
+  "working_depth_cm": 32,
+  "weight_kg": 465
+}
+```
+
+### Reactivate Inactive Implement
+
+```json
+{
+  "status": "available"
+}
+```
+
+## Related Endpoints
+
+<CardGroup cols={2}>
+  <Card title="List Implements" icon="list" href="/api-reference/implements/list">
+    View all implements
+  </Card>
+  <Card title="Get Implement" icon="magnifying-glass" href="/api-reference/implements/get">
+    Retrieve implement details before updating
+  </Card>
+  <Card title="Create Implement" icon="plus" href="/api-reference/implements/create">
+    Add a new implement (Admin only)
+  </Card>
+  <Card title="Delete Implement" icon="trash" href="/api-reference/implements/delete">
+    Remove an implement (Admin only)
+  </Card>
+</CardGroup>
+
+<Note>
+Changes to implements are reflected immediately in power calculations and recommendation queries.
+</Note>

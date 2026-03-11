@@ -1,0 +1,163 @@
+---
+title: 'Create Terrain'
+openapi: 'POST /api/terrains'
+---
+
+<Note>
+**User Association**: The `user_id` is automatically assigned from your JWT token. You cannot create terrains for other users.
+</Note>
+
+## Authentication Required
+
+This endpoint requires a valid JWT token in the Authorization header:
+
+```
+Authorization: Bearer <your_token>
+```
+
+## Request Body
+
+### Required Fields
+
+- **name** (string): Name of the terrain
+- **altitude_meters** (number): Altitude in meters
+- **slope_percentage** (number): Slope percentage
+- **soil_type** (string): Type of soil (e.g., "clay", "loam", "sandy")
+
+### Optional Fields
+
+- **temperature_celsius** (number): Temperature in Celsius
+- **status** (string): Status of the terrain (defaults to "active")
+
+## Response Codes
+
+- **201**: Terrain created successfully
+- **400**: Validation errors (missing required fields or invalid data)
+- **401**: Unauthorized (missing or invalid JWT token)
+- **500**: Internal server error
+
+## Automatic User Assignment
+
+The `user_id` field is automatically populated from the authenticated user's JWT token:
+
+```javascript
+const userId = req.user.user_id;
+const payload = {
+  user_id: userId,
+  // ... other fields
+};
+```
+
+Users cannot specify a different `user_id` in the request body.
+
+## Example Request
+
+```bash
+curl -X POST https://api.maqagr.com/api/terrains \
+  -H "Authorization: Bearer your_jwt_token" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Parcela Norte",
+    "altitude_meters": 2500,
+    "slope_percentage": 15,
+    "soil_type": "clay",
+    "temperature_celsius": 18
+  }'
+```
+
+## Example Response
+
+```json
+{
+  "success": true,
+  "message": "Terreno creado exitosamente",
+  "data": {
+    "terrain_id": 1,
+    "user_id": 5,
+    "name": "Parcela Norte",
+    "altitude_meters": 2500,
+    "slope_percentage": 15,
+    "soil_type": "clay",
+    "temperature_celsius": 18,
+    "status": "active"
+  }
+}
+```
+
+## Validation Error Response
+
+```json
+{
+  "success": false,
+  "errors": [
+    "name es requerido",
+    "altitude_meters es requerido",
+    "soil_type es requerido"
+  ]
+}
+```
+
+## Implementation Details
+
+From `terrainController.js:91-144`:
+
+```javascript
+export const createTerrain = asyncHandler(async (req, res) => {
+  const userId = req.user.user_id;
+  const {
+    name,
+    altitude_meters,
+    slope_percentage,
+    soil_type,
+    temperature_celsius,
+    status,
+  } = req.body || {};
+
+  // Validaciones básicas
+  const errors = [];
+  if (!name || typeof name !== "string" || !name.trim()) {
+    errors.push("name es requerido");
+  }
+  if (altitude_meters === undefined || altitude_meters === null) {
+    errors.push("altitude_meters es requerido");
+  }
+  if (slope_percentage === undefined || slope_percentage === null) {
+    errors.push("slope_percentage es requerido");
+  }
+  if (!soil_type || typeof soil_type !== "string" || !soil_type.trim()) {
+    errors.push("soil_type es requerido");
+  }
+
+  if (errors.length > 0) {
+    return res.status(400).json({
+      success: false,
+      errors,
+    });
+  }
+
+  const payload = {
+    user_id: userId,
+    name,
+    altitude_meters: Number(altitude_meters),
+    slope_percentage: Number(slope_percentage),
+    soil_type,
+    temperature_celsius:
+      temperature_celsius !== undefined && temperature_celsius !== null
+        ? Number(temperature_celsius)
+        : null,
+    status,
+  };
+
+  const newTerrain = await Terrain.create(payload);
+
+  return res.status(201).json({
+    success: true,
+    message: "Terreno creado exitosamente",
+    data: newTerrain,
+  });
+});
+```
+
+## Cache Invalidation
+
+Creating a terrain invalidates the terrains cache to ensure list endpoints return fresh data.

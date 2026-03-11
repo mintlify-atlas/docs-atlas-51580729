@@ -1,0 +1,419 @@
+---
+title: Testing
+description: Complete testing guide for the MaqAgr API including unit tests, integration tests, and coverage reports
+---
+
+## Overview
+
+The MaqAgr API includes a comprehensive testing suite with **97+ tests** covering unit tests, integration tests, end-to-end tests, and security tests. The project uses Jest as the testing framework with ES Modules support.
+
+## Test Commands
+
+All test commands are available through npm scripts:
+
+<CodeGroup>
+```bash Run All Tests
+npm test
+```
+
+```bash Watch Mode
+npm run test:watch
+```
+
+```bash Coverage Report
+npm run test:coverage
+```
+
+```bash Unit Tests Only
+npm run test:unit
+```
+
+```bash E2E Tests Only
+npm run test:e2e
+```
+
+```bash Integration Tests
+npm run test:integration
+```
+
+```bash Middleware Tests
+npm run test:middleware
+```
+</CodeGroup>
+
+## Test Structure
+
+The test suite is organized into multiple categories:
+
+### Unit Tests
+
+Unit tests focus on testing individual components in isolation:
+
+<CodeGroup>
+```javascript Middleware Tests
+tests/unit/middleware/
+├── error.middleware.test.js
+└── pagination.middleware.test.js
+```
+
+```javascript Controller Tests
+tests/unit/controllers/
+├── authController.test.js
+├── tractorController.test.js
+├── terrainController.test.js
+├── implementController.test.js
+└── healthController.test.js
+```
+
+```javascript Service Tests
+tests/unit/services/
+├── powerLossService.test.js
+└── recommendationService.test.js
+```
+
+```javascript Utility Tests
+tests/unit/utils/
+└── errors.util.test.js
+```
+</CodeGroup>
+
+### Integration Tests
+
+Integration tests verify complete workflows with real database connections:
+
+```javascript
+tests/integration/
+├── auth.integration.test.js          // Complete auth flow
+├── terrains.integration.test.js       // Terrain CRUD operations
+├── recommendations.integration.test.js // Recommendation engine
+└── cache.test.js                      // Redis caching
+```
+
+<Info>
+Integration tests use a separate test database (`maqagr_test`) to avoid affecting production data.
+</Info>
+
+### Security Tests
+
+Security tests validate protection mechanisms:
+
+```javascript
+tests/security/
+├── cors.test.js           // CORS configuration
+├── helmet.test.js         // Security headers
+├── rateLimiter.test.js    // Rate limiting
+└── sanitize.test.js       // Input sanitization
+```
+
+## Test Configuration
+
+The Jest configuration is defined in `jest.config.js`:
+
+```javascript jest.config.js
+export default {
+  testEnvironment: "node",
+  testMatch: ["**/__tests__/**/*.test.js", "**/?(*.)+(spec|test).js"],
+  
+  // Coverage settings
+  collectCoverageFrom: [
+    "src/**/*.js",
+    "!src/app.js",
+    "!src/scripts/**",
+    "!src/models/**",
+  ],
+  
+  // Coverage thresholds
+  coverageThreshold: {
+    global: {
+      statements: 60,
+      branches: 50,
+      functions: 60,
+      lines: 60,
+    },
+  },
+  
+  testTimeout: 10000,
+  verbose: true,
+  setupFilesAfterEnv: ["<rootDir>/src/__tests__/setup.js"],
+};
+```
+
+## Coverage Report
+
+Generate a detailed coverage report:
+
+```bash
+npm run test:coverage
+```
+
+Coverage goals:
+- **Statements**: 60%
+- **Branches**: 50%
+- **Functions**: 60%
+- **Lines**: 60%
+
+<Note>
+Middleware and utilities have **>85% coverage** as of the latest implementation (DDAAM-80).
+</Note>
+
+## Writing Tests
+
+### Example: Unit Test
+
+Testing a utility function:
+
+```javascript src/__tests__/unit/utils/response.util.test.js
+import { describe, it, expect, jest } from '@jest/globals';
+import { successResponse, errorResponse } from '../../../utils/response.util.js';
+
+describe('Response Utility', () => {
+  let mockRes;
+
+  beforeEach(() => {
+    mockRes = {
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn().mockReturnThis()
+    };
+  });
+
+  it('should send success response with 200 status', () => {
+    const data = { id: 1, name: 'Test' };
+    successResponse(mockRes, data, 'Success message');
+
+    expect(mockRes.status).toHaveBeenCalledWith(200);
+    expect(mockRes.json).toHaveBeenCalledWith({
+      success: true,
+      message: 'Success message',
+      data
+    });
+  });
+
+  it('should send error response with custom status', () => {
+    errorResponse(mockRes, 'Error message', 400);
+
+    expect(mockRes.status).toHaveBeenCalledWith(400);
+    expect(mockRes.json).toHaveBeenCalledWith({
+      success: false,
+      message: 'Error message'
+    });
+  });
+});
+```
+
+### Example: Integration Test
+
+Testing complete authentication flow:
+
+```javascript tests/integration/auth.integration.test.js
+import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
+import { request, TEST_USER, resetTestDB, closePool } from './helpers/testHelpers.js';
+
+describe('Authentication Flow', () => {
+  let userToken;
+
+  beforeAll(async () => {
+    await resetTestDB();
+  });
+
+  afterAll(async () => {
+    await closePool();
+  });
+
+  it('should register a new user', async () => {
+    const res = await request
+      .post('/api/auth/register')
+      .send(TEST_USER);
+
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data).toHaveProperty('token');
+    expect(res.body.data.user).toMatchObject({
+      name: TEST_USER.name,
+      email: TEST_USER.email
+    });
+
+    userToken = res.body.data.token;
+  });
+
+  it('should login with valid credentials', async () => {
+    const res = await request
+      .post('/api/auth/login')
+      .send({
+        email: TEST_USER.email,
+        password: TEST_USER.password
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toHaveProperty('token');
+  });
+
+  it('should access protected profile with token', async () => {
+    const res = await request
+      .get('/api/auth/profile')
+      .set('Authorization', `Bearer ${userToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.user.email).toBe(TEST_USER.email);
+  });
+});
+```
+
+## Test Helpers
+
+The project includes helper utilities for testing:
+
+### API Client
+
+```javascript
+import supertest from 'supertest';
+import app from '../../../app.js';
+
+export const request = supertest(app);
+```
+
+### Database Helpers
+
+```javascript
+export const resetTestDB = async () => {
+  // Clean and reset test database
+  await pool.query('TRUNCATE TABLE users CASCADE');
+  await pool.query('TRUNCATE TABLE tractors CASCADE');
+  // ... reset other tables
+};
+
+export const closePool = async () => {
+  await pool.end();
+};
+```
+
+### Test Data Factory
+
+```javascript
+export const TEST_USER = {
+  name: 'Test User',
+  email: 'test@example.com',
+  password: 'TestPass123'
+};
+
+export const createTestTractor = (overrides = {}) => ({
+  name: 'Test Tractor',
+  power: 75,
+  weight: 3200,
+  brand: 'John Deere',
+  ...overrides
+});
+```
+
+## Mocking
+
+### Mocking External Dependencies
+
+```javascript
+import { jest } from '@jest/globals';
+
+// Mock logger
+jest.mock('../utils/logger.js', () => ({
+  default: {
+    info: jest.fn(),
+    error: jest.fn(),
+    warn: jest.fn()
+  }
+}));
+
+// Mock Redis
+jest.mock('ioredis', () => require('ioredis-mock'));
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use ES Modules">
+    All tests use ES Modules syntax. Run tests with:
+    ```bash
+    node --experimental-vm-modules node_modules/jest/bin/jest.js
+    ```
+  </Accordion>
+
+  <Accordion title="Isolate Tests">
+    - Reset database state between tests
+    - Use `beforeEach` and `afterEach` for cleanup
+    - Mock external services (Redis, external APIs)
+  </Accordion>
+
+  <Accordion title="Descriptive Test Names">
+    Use clear, descriptive test names:
+    ```javascript
+    it('should return 401 when token is expired')
+    it('should calculate power loss correctly for 10% slope')
+    ```
+  </Accordion>
+
+  <Accordion title="Test Error Cases">
+    Always test both success and failure scenarios:
+    ```javascript
+    it('should create user with valid data');
+    it('should reject duplicate email with 409');
+    it('should reject invalid password format');
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Continuous Integration
+
+Tests run automatically in CI/CD pipelines. Ensure all tests pass before merging:
+
+```yaml .github/workflows/test.yml
+name: Run Tests
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '24'
+      - run: npm install
+      - run: npm run test:coverage
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Tests Timeout">
+    Increase timeout in `jest.config.js`:
+    ```javascript
+    testTimeout: 10000 // 10 seconds
+    ```
+  </Accordion>
+
+  <Accordion title="Database Connection Errors">
+    Ensure test database exists and credentials are correct:
+    ```bash
+    createdb maqagr_test
+    # Update .env with TEST_DB_NAME=maqagr_test
+    ```
+  </Accordion>
+
+  <Accordion title="ES Module Errors">
+    Verify `package.json` includes:
+    ```json
+    {
+      "type": "module"
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Related Documentation
+
+<CardGroup cols={2}>
+  <Card title="Error Handling" icon="triangle-exclamation" href="/development/error-handling">
+    Learn about error handling patterns
+  </Card>
+  <Card title="Utilities" icon="wrench" href="/development/utilities">
+    Explore utility functions and helpers
+  </Card>
+</CardGroup>

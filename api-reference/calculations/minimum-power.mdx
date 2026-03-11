@@ -1,0 +1,471 @@
+---
+title: 'Calculate Minimum Power'
+description: 'Calculate minimum power required for an implement and get tractor recommendations'
+openapi: 'POST /api/calculations/minimum-power'
+---
+
+## Overview
+
+Calculates the minimum power required to operate an agricultural implement on specific terrain, and classifies available tractors by compatibility using an intelligent recommendation system.
+
+The endpoint evaluates all available tractors and categorizes them into three suitability levels: **OPTIMAL**, **OVERPOWERED**, or **INSUFFICIENT**.
+
+## Tractor Classification System
+
+Tractors are classified based on their power utilization efficiency:
+
+- **OPTIMAL** (Green): Power between 100-125% of required (perfect fit)
+- **OVERPOWERED** (Yellow): Power &gt;125% of required (oversized but compatible)
+- **INSUFFICIENT** (Red): Power below required (not compatible)
+
+## Factors Considered
+
+The calculation considers:
+
+- Base power requirement of the implement (HP)
+- Working depth
+- Soil type
+- Terrain slope percentage
+
+## Authentication
+
+This endpoint requires authentication via Bearer token in the Authorization header.
+
+```bash
+Authorization: Bearer <your_token>
+```
+
+## Request Body
+
+<ParamField body="implement_id" type="integer" required>
+  ID of the agricultural implement to evaluate. Must be a positive integer greater than 0.
+</ParamField>
+
+<ParamField body="terrain_id" type="integer" required>
+  ID of the terrain where the implement will operate. Must be a positive integer greater than 0.
+</ParamField>
+
+<ParamField body="working_depth_m" type="number">
+  Override for working depth in meters. If not provided, uses the implement's default working depth.
+  
+  **Validation**: 0 &lt; working_depth_m &lt;= 1.0
+  
+  **Default**: Uses implement's `working_depth_cm` converted to meters, or 0.25m if not specified
+</ParamField>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Indicates whether the calculation was successful.
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Human-readable message describing the result.
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  Container for calculation results and recommendations.
+  
+  <Expandable title="data properties">
+    <ResponseField name="queryId" type="integer">
+      Unique identifier for this calculation query, used for audit and history tracking.
+    </ResponseField>
+    
+    <ResponseField name="implement" type="object">
+      Information about the evaluated implement.
+      
+      <Expandable title="implement properties">
+        <ResponseField name="id" type="integer">
+          Implement ID.
+        </ResponseField>
+        
+        <ResponseField name="name" type="string">
+          Implement name.
+        </ResponseField>
+        
+        <ResponseField name="brand" type="string">
+          Implement brand.
+        </ResponseField>
+        
+        <ResponseField name="type" type="string">
+          Type of implement (e.g., plow, harrow, seeder).
+        </ResponseField>
+        
+        <ResponseField name="power_requirement_hp" type="number">
+          Base power requirement in horsepower.
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="terrain" type="object">
+      Information about the terrain conditions.
+      
+      <Expandable title="terrain properties">
+        <ResponseField name="id" type="integer">
+          Terrain ID.
+        </ResponseField>
+        
+        <ResponseField name="name" type="string">
+          Terrain name or location.
+        </ResponseField>
+        
+        <ResponseField name="soil_type" type="string">
+          Type of soil (e.g., clay, loam, sand).
+        </ResponseField>
+        
+        <ResponseField name="slope_percentage" type="number">
+          Terrain slope percentage.
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="powerRequirement" type="object">
+      Power requirement calculation results.
+      
+      <Expandable title="powerRequirement properties">
+        <ResponseField name="minimum_power_hp" type="number">
+          Minimum power required to operate the implement, in horsepower (HP).
+        </ResponseField>
+        
+        <ResponseField name="calculated_power_hp" type="number">
+          Calculated power considering all factors, in horsepower (HP).
+        </ResponseField>
+        
+        <ResponseField name="factors" type="object">
+          Breakdown of factors that contributed to the power requirement.
+          
+          <Expandable title="factors properties">
+            <ResponseField name="base_power_hp" type="number">
+              Base implement power requirement.
+            </ResponseField>
+            
+            <ResponseField name="depth_factor" type="number">
+              Multiplier based on working depth.
+            </ResponseField>
+            
+            <ResponseField name="soil_factor" type="number">
+              Multiplier based on soil type resistance.
+            </ResponseField>
+            
+            <ResponseField name="slope_factor" type="number">
+              Multiplier based on terrain slope.
+            </ResponseField>
+          </Expandable>
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="tractorAnalysis" type="object">
+      Summary of tractor evaluation results.
+      
+      <Expandable title="tractorAnalysis properties">
+        <ResponseField name="total_evaluated" type="integer">
+          Total number of tractors evaluated.
+        </ResponseField>
+        
+        <ResponseField name="summary" type="object">
+          Count of tractors by suitability category.
+          
+          <Expandable title="summary properties">
+            <ResponseField name="optimal" type="integer">
+              Number of tractors in the OPTIMAL category (100-125% power).
+            </ResponseField>
+            
+            <ResponseField name="overpowered" type="integer">
+              Number of tractors in the OVERPOWERED category (>125% power).
+            </ResponseField>
+            
+            <ResponseField name="insufficient" type="integer">
+              Number of tractors with INSUFFICIENT power.
+            </ResponseField>
+          </Expandable>
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="recommendations" type="object">
+      Tractor recommendations ranked by suitability.
+      
+      <Expandable title="recommendations properties">
+        <ResponseField name="top_5" type="array">
+          Top 5 recommended tractors, prioritizing OPTIMAL then OVERPOWERED by efficiency.
+          
+          <Expandable title="tractor item properties">
+            <ResponseField name="rank" type="integer">
+              Recommendation rank (1-5).
+            </ResponseField>
+            
+            <ResponseField name="tractor_id" type="integer">
+              Tractor ID.
+            </ResponseField>
+            
+            <ResponseField name="name" type="string">
+              Tractor name.
+            </ResponseField>
+            
+            <ResponseField name="brand" type="string">
+              Tractor brand.
+            </ResponseField>
+            
+            <ResponseField name="model" type="string">
+              Tractor model.
+            </ResponseField>
+            
+            <ResponseField name="engine_power_hp" type="number">
+              Tractor engine power in horsepower.
+            </ResponseField>
+            
+            <ResponseField name="suitability" type="object">
+              Suitability classification details.
+              
+              <Expandable title="suitability properties">
+                <ResponseField name="score" type="string">
+                  Classification score: "OPTIMAL", "OVERPOWERED", or "INSUFFICIENT".
+                </ResponseField>
+                
+                <ResponseField name="label" type="string">
+                  Human-readable label (e.g., "Óptimo", "Sobredimensionado").
+                </ResponseField>
+                
+                <ResponseField name="color" type="string">
+                  Color indicator: "green", "yellow", or "red".
+                </ResponseField>
+                
+                <ResponseField name="utilizationPercent" type="integer">
+                  Power utilization percentage: (required_power / tractor_power) × 100.
+                </ResponseField>
+                
+                <ResponseField name="isCompatible" type="boolean">
+                  Whether the tractor is compatible (OPTIMAL or OVERPOWERED).
+                </ResponseField>
+              </Expandable>
+            </ResponseField>
+          </Expandable>
+        </ResponseField>
+        
+        <ResponseField name="best_match" type="object">
+          The best matching tractor (same structure as top_5 items), or null if no compatible tractors.
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Request Example
+
+```bash
+curl -X POST https://api.maqagr.com/api/calculations/minimum-power \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "implement_id": 1,
+    "terrain_id": 1,
+    "working_depth_m": 0.3
+  }'
+```
+
+## Response Example
+
+```json
+{
+  "success": true,
+  "message": "Cálculo de potencia mínima realizado con éxito",
+  "data": {
+    "queryId": 456,
+    "implement": {
+      "id": 1,
+      "name": "Arado de Discos",
+      "brand": "Kuhn",
+      "type": "plow",
+      "power_requirement_hp": 80
+    },
+    "terrain": {
+      "id": 1,
+      "name": "Campo Norte",
+      "soil_type": "loam",
+      "slope_percentage": 5.2
+    },
+    "powerRequirement": {
+      "minimum_power_hp": 95.5,
+      "calculated_power_hp": 98.3,
+      "factors": {
+        "base_power_hp": 80,
+        "depth_factor": 1.15,
+        "soil_factor": 1.08,
+        "slope_factor": 1.05
+      }
+    },
+    "tractorAnalysis": {
+      "total_evaluated": 15,
+      "summary": {
+        "optimal": 3,
+        "overpowered": 8,
+        "insufficient": 4
+      }
+    },
+    "recommendations": {
+      "top_5": [
+        {
+          "rank": 1,
+          "tractor_id": 5,
+          "name": "Case IH Magnum 180",
+          "brand": "Case IH",
+          "model": "Magnum 180",
+          "engine_power_hp": 115,
+          "suitability": {
+            "score": "OPTIMAL",
+            "label": "Óptimo",
+            "color": "green",
+            "utilizationPercent": 83,
+            "isCompatible": true
+          }
+        },
+        {
+          "rank": 2,
+          "tractor_id": 3,
+          "name": "John Deere 6150R",
+          "brand": "John Deere",
+          "model": "6150R",
+          "engine_power_hp": 120,
+          "suitability": {
+            "score": "OPTIMAL",
+            "label": "Óptimo",
+            "color": "green",
+            "utilizationPercent": 80,
+            "isCompatible": true
+          }
+        },
+        {
+          "rank": 3,
+          "tractor_id": 8,
+          "name": "New Holland T7.270",
+          "brand": "New Holland",
+          "model": "T7.270",
+          "engine_power_hp": 150,
+          "suitability": {
+            "score": "OVERPOWERED",
+            "label": "Sobredimensionado",
+            "color": "yellow",
+            "utilizationPercent": 64,
+            "isCompatible": true
+          }
+        }
+      ],
+      "best_match": {
+        "rank": 1,
+        "tractor_id": 5,
+        "name": "Case IH Magnum 180",
+        "brand": "Case IH",
+        "model": "Magnum 180",
+        "engine_power_hp": 115,
+        "suitability": {
+          "score": "OPTIMAL",
+          "label": "Óptimo",
+          "color": "green",
+          "utilizationPercent": 83,
+          "isCompatible": true
+        }
+      }
+    }
+  }
+}
+```
+
+## Error Responses
+
+<ResponseField name="400 Bad Request" type="object">
+  Returned when required fields are missing or validation fails.
+  
+  ```json
+  {
+    "success": false,
+    "message": "Faltan campos requeridos: implement_id, terrain_id"
+  }
+  ```
+  
+  Or for validation errors:
+  
+  ```json
+  {
+    "success": false,
+    "error": "working_depth_m no puede exceder 1.0 metros (profundidad agrícola máxima)"
+  }
+  ```
+</ResponseField>
+
+<ResponseField name="401 Unauthorized" type="object">
+  Returned when the authentication token is missing or invalid.
+  
+  ```json
+  {
+    "success": false,
+    "message": "Token no proporcionado o inválido"
+  }
+  ```
+</ResponseField>
+
+<ResponseField name="404 Not Found" type="object">
+  Returned when the specified implement or terrain is not found.
+  
+  ```json
+  {
+    "success": false,
+    "message": "Implemento no encontrado"
+  }
+  ```
+  
+  Or:
+  
+  ```json
+  {
+    "success": false,
+    "message": "Terreno no encontrado"
+  }
+  ```
+</ResponseField>
+
+<ResponseField name="500 Internal Server Error" type="object">
+  Returned when an unexpected error occurs during processing.
+  
+  ```json
+  {
+    "success": false,
+    "message": "Error procesando la solicitud de cálculo de potencia mínima"
+  }
+  ```
+</ResponseField>
+
+## Validation Rules
+
+| Parameter | Type | Required | Validation |
+|-----------|------|----------|------------|
+| `implement_id` | integer | Yes | Must be &gt; 0 |
+| `terrain_id` | integer | Yes | Must be &gt; 0 |
+| `working_depth_m` | number | No | 0 &lt; value &lt;= 1.0 |
+
+## Suitability Thresholds
+
+The classification system uses the following thresholds:
+
+| Classification | Power Range | Utilization % | Compatible |
+|---------------|-------------|---------------|------------|
+| **OPTIMAL** | 100% - 125% of required | 80% - 100% | Yes |
+| **OVERPOWERED** | &gt; 125% of required | &lt; 80% | Yes |
+| **INSUFFICIENT** | &lt; 100% of required | &gt; 100% | No |
+
+## Recommendation Priority
+
+The top 5 recommendations are sorted by:
+
+1. **OPTIMAL** tractors first, sorted by highest utilization percentage (most efficient)
+2. **OVERPOWERED** tractors second, sorted by highest utilization percentage (least oversized)
+3. **INSUFFICIENT** tractors are excluded from recommendations
+
+## Notes
+
+- Only tractors with status `available` are evaluated
+- If no compatible tractors exist, `queryId` will be null and the response includes only the power requirement calculation
+- The calculation is persisted to the database only when at least one compatible tractor is found
+- All calculations include audit logging in the `query_history` table
+- The `best_match` is always the first item in `top_5` array, or null if no compatible tractors
+- Implementation reference: src/controllers/calculationController.js:244-476

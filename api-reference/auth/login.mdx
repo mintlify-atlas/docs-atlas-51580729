@@ -1,0 +1,186 @@
+---
+title: 'Login'
+api: 'POST /api/auth/login'
+description: 'Authenticate a user and receive a JWT token'
+---
+
+## Description
+
+Authenticates a user with email and password. Returns a JWT token that must be used in the Authorization header for protected endpoints. Automatically updates the user's `last_session` field.
+
+## Authentication
+
+This endpoint is **public** and does not require authentication.
+
+## Rate Limiting
+
+- **Limit:** 5 requests per 15 minutes per IP address
+- **Error Message:** "Demasiados intentos de inicio de sesión. Por favor, intente de nuevo en 15 minutos."
+- **Note:** This strict rate limiting protects against brute force attacks
+
+## Request Body
+
+<ParamField path="email" type="string" required>
+  User's email address
+</ParamField>
+
+<ParamField path="password" type="string" required>
+  User's password
+</ParamField>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Human-readable response message
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  Response data containing authentication token and user information
+  
+  <Expandable title="data properties">
+    <ResponseField name="token" type="string">
+      JWT authentication token. Include this in the Authorization header as "Bearer {token}" for protected endpoints
+    </ResponseField>
+    
+    <ResponseField name="user" type="object">
+      Basic user information
+      
+      <Expandable title="user properties">
+        <ResponseField name="name" type="string">
+          User's full name
+        </ResponseField>
+        
+        <ResponseField name="email" type="string">
+          User's email address
+        </ResponseField>
+        
+        <ResponseField name="role_id" type="integer">
+          User's role identifier
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Example Request
+
+```bash cURL
+curl -X POST https://api.maqagr.com/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "juan@example.com",
+    "password": "MiPassword123!"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.maqagr.com/api/auth/login', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    email: 'juan@example.com',
+    password: 'MiPassword123!'
+  })
+});
+
+const data = await response.json();
+const token = data.data.token;
+
+// Use token in subsequent requests
+const protectedResponse = await fetch('https://api.maqagr.com/api/auth/profile', {
+  headers: {
+    'Authorization': `Bearer ${token}`
+  }
+});
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    'https://api.maqagr.com/api/auth/login',
+    json={
+        'email': 'juan@example.com',
+        'password': 'MiPassword123!'
+    }
+)
+
+data = response.json()
+token = data['data']['token']
+
+# Use token in subsequent requests
+protected_response = requests.get(
+    'https://api.maqagr.com/api/auth/profile',
+    headers={'Authorization': f'Bearer {token}'}
+)
+```
+
+## Success Response (200)
+
+```json
+{
+  "success": true,
+  "message": "Inicio de sesión exitoso",
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIs...",
+    "user": {
+      "name": "Juan Pérez",
+      "email": "juan@example.com",
+      "role_id": 2
+    }
+  }
+}
+```
+
+## Error Responses
+
+### 400 - Missing Credentials
+
+```json
+{
+  "success": false,
+  "message": "Email y contraseña son requeridos"
+}
+```
+
+### 401 - Invalid Credentials
+
+```json
+{
+  "success": false,
+  "message": "Credenciales inválidas"
+}
+```
+
+### 401 - Inactive User
+
+```json
+{
+  "success": false,
+  "message": "Usuario inactivo o suspendido"
+}
+```
+
+### 429 - Too Many Requests (Rate Limit)
+
+```json
+{
+  "success": false,
+  "message": "Demasiados intentos de inicio de sesión. Por favor, intente de nuevo en 15 minutos."
+}
+```
+
+### 500 - Internal Server Error
+
+```json
+{
+  "success": false,
+  "message": "Error interno del servidor"
+}
+```

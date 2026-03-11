@@ -1,0 +1,98 @@
+---
+title: 'List Terrains'
+openapi: 'GET /api/terrains'
+---
+
+<Note>
+**User-Scoped Resource**: This endpoint only returns terrains owned by the authenticated user. Each user can only view their own terrains.
+</Note>
+
+## Authentication Required
+
+This endpoint requires a valid JWT token in the Authorization header:
+
+```
+Authorization: Bearer <your_token>
+```
+
+## Pagination
+
+Results are paginated with the following default values:
+- **limit**: 10 (records per page)
+- **offset**: 0 (starting position)
+
+You can customize pagination using query parameters:
+
+```bash
+GET /api/terrains?limit=20&offset=10
+```
+
+## Response Structure
+
+The response includes:
+- **success**: Boolean indicating request success
+- **data**: Array of terrain objects belonging to the authenticated user
+- **pagination**: Pagination metadata (page, limit, total, totalPages)
+
+## Ownership Validation
+
+The `user_id` filter is automatically applied based on the authenticated user's JWT token. Users cannot access terrains belonging to other users.
+
+## Example Response
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "terrain_id": 1,
+      "user_id": 5,
+      "name": "Parcela Norte",
+      "altitude_meters": 2500,
+      "slope_percentage": 15,
+      "soil_type": "clay",
+      "temperature_celsius": 18,
+      "status": "active"
+    },
+    {
+      "terrain_id": 2,
+      "user_id": 5,
+      "name": "Parcela Sur",
+      "altitude_meters": 2300,
+      "slope_percentage": 8,
+      "soil_type": "loam",
+      "temperature_celsius": 20,
+      "status": "active"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "total": 2,
+    "totalPages": 1
+  }
+}
+```
+
+## Implementation Details
+
+From `terrainController.js:39-54`:
+
+```javascript
+export const getAllTerrains = asyncHandler(async (req, res) => {
+  const userId = req.user.user_id;
+  const terrains = await Terrain.findByUserId(userId);
+  const { data, total, limit, page, totalPages } = applyPagination(terrains, req.pagination);
+
+  return res.json({
+    success: true,
+    data,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages,
+    },
+  });
+});
+```

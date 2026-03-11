@@ -1,0 +1,424 @@
+---
+title: 'Create Implement'
+description: 'Add a new agricultural implement to the catalog (Admin only)'
+---
+
+# Create Implement
+
+Create a new agricultural implement in the system catalog. This endpoint requires administrator authentication.
+
+<Warning>
+**Authentication Required**: This endpoint requires a valid JWT Bearer token with administrator privileges (`role_id: 1`).
+</Warning>
+
+## Endpoint
+
+```
+POST /api/implements
+```
+
+## Authentication
+
+Include your JWT token in the Authorization header:
+
+```http
+Authorization: Bearer <your_jwt_token>
+```
+
+See the [Authentication Guide](/authentication) for details on obtaining and using tokens.
+
+## Request Body
+
+<ParamField body="implement_name" type="string" required>
+  Name of the implement
+  
+  **Example**: "3-body disc plow"
+</ParamField>
+
+<ParamField body="brand" type="string" required>
+  Manufacturer brand name
+  
+  **Example**: "Baldan", "Tatu", "Semeato"
+</ParamField>
+
+<ParamField body="power_requirement_hp" type="number" required>
+  Required horsepower (HP) to operate the implement
+  
+  **Validation**: Must be a positive number
+  
+  **Example**: `50`, `85`, `120`
+</ParamField>
+
+<ParamField body="working_width_m" type="number" required>
+  Working width in meters
+  
+  **Validation**: Must be a positive number
+  
+  **Example**: `0.9`, `1.5`, `2.4`
+</ParamField>
+
+<ParamField body="implement_type" type="string" required>
+  Type of implement. Must be one of:
+  - `plow` - Disc or moldboard plows
+  - `harrow` - Disc or tine harrows
+  - `seeder` - Seed planting equipment
+  - `sprayer` - Pesticide/fertilizer sprayers
+  - `harvester` - Harvesting equipment
+  - `cultivator` - Soil cultivation tools
+  - `mower` - Mowing equipment
+  - `trailer` - Agricultural trailers
+  - `other` - Other agricultural implements
+</ParamField>
+
+<ParamField body="soil_type" type="string">
+  Compatible soil type(s)
+  
+  **Common Values**: "Loam", "Clay", "Sandy", "Silty", "All"
+  
+  **Example**: "Loam", "Heavy clay", "All"
+</ParamField>
+
+<ParamField body="working_depth_cm" type="number">
+  Working depth in centimeters (for plows, cultivators, etc.)
+  
+  **Validation**: Must be a positive number if provided
+  
+  **Example**: `25`, `30`, `15`
+</ParamField>
+
+<ParamField body="weight_kg" type="number">
+  Implement weight in kilograms
+  
+  **Validation**: Must be a positive number if provided
+  
+  **Example**: `320`, `450`, `280`
+</ParamField>
+
+<ParamField body="status" type="string" default="available">
+  Current status of the implement. Must be one of:
+  - `available` - Ready for use (default)
+  - `maintenance` - Under maintenance
+  - `inactive` - Not in service
+</ParamField>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Indicates if the implement was created successfully
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Success or error message
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  The newly created implement object with all fields including the generated `implement_id` and `registration_date`
+</ResponseField>
+
+## Examples
+
+### Create a Plow
+
+<CodeGroup>
+```bash cURL
+curl -X POST http://localhost:4000/api/implements \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -d '{
+    "implement_name": "Arado de discos 3 cuerpos",
+    "brand": "Baldan",
+    "power_requirement_hp": 85,
+    "working_width_m": 1.2,
+    "soil_type": "clay",
+    "working_depth_cm": 30,
+    "weight_kg": 450,
+    "implement_type": "plow",
+    "status": "available"
+  }'
+```
+
+```javascript JavaScript
+const token = 'your_jwt_token_here';
+
+const response = await fetch('http://localhost:4000/api/implements', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  },
+  body: JSON.stringify({
+    implement_name: 'Arado de discos 3 cuerpos',
+    brand: 'Baldan',
+    power_requirement_hp: 85,
+    working_width_m: 1.2,
+    soil_type: 'clay',
+    working_depth_cm: 30,
+    weight_kg: 450,
+    implement_type: 'plow',
+    status: 'available'
+  })
+});
+
+const data = await response.json();
+console.log(`Created implement ID: ${data.data.implement_id}`);
+```
+
+```python Python
+import requests
+
+token = 'your_jwt_token_here'
+
+response = requests.post(
+    'http://localhost:4000/api/implements',
+    headers={
+        'Content-Type': 'application/json',
+        'Authorization': f'Bearer {token}'
+    },
+    json={
+        'implement_name': 'Arado de discos 3 cuerpos',
+        'brand': 'Baldan',
+        'power_requirement_hp': 85,
+        'working_width_m': 1.2,
+        'soil_type': 'clay',
+        'working_depth_cm': 30,
+        'weight_kg': 450,
+        'implement_type': 'plow',
+        'status': 'available'
+    }
+)
+
+data = response.json()
+print(f"Created implement ID: {data['data']['implement_id']}")
+```
+</CodeGroup>
+
+### Create a Seeder
+
+<CodeGroup>
+```bash cURL
+curl -X POST http://localhost:4000/api/implements \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -d '{
+    "implement_name": "Sembradora de precisión 8 hileras",
+    "brand": "Semeato",
+    "power_requirement_hp": 65,
+    "working_width_m": 2.4,
+    "soil_type": "All",
+    "working_depth_cm": 8,
+    "weight_kg": 580,
+    "implement_type": "seeder"
+  }'
+```
+
+```javascript JavaScript
+const implementData = {
+  implement_name: 'Sembradora de precisión 8 hileras',
+  brand: 'Semeato',
+  power_requirement_hp: 65,
+  working_width_m: 2.4,
+  soil_type: 'All',
+  working_depth_cm: 8,
+  weight_kg: 580,
+  implement_type: 'seeder'
+};
+
+const response = await fetch('http://localhost:4000/api/implements', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  },
+  body: JSON.stringify(implementData)
+});
+
+const result = await response.json();
+```
+
+```python Python
+implement_data = {
+    'implement_name': 'Sembradora de precisión 8 hileras',
+    'brand': 'Semeato',
+    'power_requirement_hp': 65,
+    'working_width_m': 2.4,
+    'soil_type': 'All',
+    'working_depth_cm': 8,
+    'weight_kg': 580,
+    'implement_type': 'seeder'
+}
+
+response = requests.post(
+    'http://localhost:4000/api/implements',
+    headers={'Authorization': f'Bearer {token}'},
+    json=implement_data
+)
+```
+</CodeGroup>
+
+### Response Example (201 Created)
+
+```json
+{
+  "success": true,
+  "message": "Implemento creado exitosamente",
+  "data": {
+    "implement_id": 15,
+    "implement_name": "Arado de discos 3 cuerpos",
+    "brand": "Baldan",
+    "power_requirement_hp": 85,
+    "working_width_m": 1.2,
+    "soil_type": "clay",
+    "working_depth_cm": 30,
+    "weight_kg": 450,
+    "implement_type": "plow",
+    "status": "available",
+    "registration_date": "2026-03-11T14:30:00.000Z"
+  }
+}
+```
+
+## Error Responses
+
+### Validation Error (400)
+
+```json
+{
+  "success": false,
+  "message": "Errores de validación",
+  "errors": [
+    "implement_name es requerido",
+    "power_requirement_hp debe ser un número positivo",
+    "implement_type debe ser uno de: plow, harrow, seeder, sprayer, harvester, cultivator, mower, trailer, other"
+  ]
+}
+```
+
+### Unauthorized - No Token (401)
+
+```json
+{
+  "success": false,
+  "message": "Token no proporcionado"
+}
+```
+
+### Unauthorized - Invalid Token (401)
+
+```json
+{
+  "success": false,
+  "message": "Token inválido o expirado"
+}
+```
+
+### Forbidden - Not Admin (403)
+
+```json
+{
+  "success": false,
+  "message": "Acceso denegado: se requiere rol de administrador"
+}
+```
+
+### Internal Server Error (500)
+
+```json
+{
+  "success": false,
+  "message": "Error al crear implemento"
+}
+```
+
+## Validation Rules
+
+### Required Fields
+
+The following fields are required when creating an implement:
+
+- `implement_name` (non-empty string)
+- `brand` (non-empty string)
+- `power_requirement_hp` (positive number)
+- `working_width_m` (positive number)
+- `implement_type` (valid enum value)
+
+### Implement Type Validation
+
+The `implement_type` field must be one of:
+
+```
+plow, harrow, seeder, sprayer, harvester, cultivator, mower, trailer, other
+```
+
+### Status Validation
+
+If provided, `status` must be one of:
+
+```
+available, maintenance, inactive
+```
+
+**Default**: If not provided, status defaults to `available`.
+
+### Numeric Validation
+
+All numeric fields must be positive numbers:
+
+- `power_requirement_hp`  &gt; 0
+- `working_width_m`  &gt; 0
+- `working_depth_cm`  &gt; 0 (if provided)
+- `weight_kg`  &gt; 0 (if provided)
+
+<Info>
+The validation middleware (`src/middleware/validation.middleware.js:65`) automatically sanitizes inputs and validates all fields before processing.
+</Info>
+
+## Implementation Notes
+
+- **Source**: `src/routes/implement.routes.js:349` - Route definition
+- **Controller**: `src/controllers/implementController.js:159` - `createImplement` function
+- **Model**: `src/models/Implement.js:19` - `create(implementData)` method
+- **SQL**: `INSERT INTO implement (...) VALUES (...) RETURNING *`
+- **Middleware Chain**:
+  1. `verifyTokenMiddleware` - Validates JWT token
+  2. `isAdmin` - Checks for admin role (`role_id: 1`)
+  3. `validateImplement` - Validates request body fields
+  4. `createImplement` - Creates the implement
+- **Cache Invalidation**: Automatically invalidates cache entries matching `*implements*` pattern
+
+## Related Endpoints
+
+<CardGroup cols={2}>
+  <Card title="List Implements" icon="list" href="/api-reference/implements/list">
+    View all created implements
+  </Card>
+  <Card title="Get Implement" icon="magnifying-glass" href="/api-reference/implements/get">
+    Retrieve a specific implement by ID
+  </Card>
+  <Card title="Update Implement" icon="pen" href="/api-reference/implements/update">
+    Modify an existing implement (Admin only)
+  </Card>
+  <Card title="Delete Implement" icon="trash" href="/api-reference/implements/delete">
+    Remove an implement (Admin only)
+  </Card>
+</CardGroup>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Accurate Power Requirements" icon="bolt">
+    Ensure `power_requirement_hp` reflects realistic tractor power needs based on implement size and soil conditions
+  </Card>
+  <Card title="Clear Naming" icon="tag">
+    Use descriptive implement names that include key specifications (e.g., "3-body disc plow" vs just "plow")
+  </Card>
+  <Card title="Soil Compatibility" icon="mountain">
+    Specify accurate soil type compatibility to help users make informed equipment selections
+  </Card>
+  <Card title="Complete Data" icon="clipboard-check">
+    Provide all optional fields (weight, working depth) when available for better recommendations
+  </Card>
+</CardGroup>
+
+<Note>
+Implements created via this endpoint are immediately available for use in power calculations and tractor-implement matching recommendations.
+</Note>

@@ -1,0 +1,226 @@
+---
+title: 'Get Tractor'
+description: 'Retrieve a specific tractor by ID'
+---
+
+# Get Tractor
+
+Retrieve detailed information about a specific tractor using its unique identifier. This endpoint is public and does not require authentication.
+
+## Endpoint
+
+```
+GET /api/tractors/:id
+```
+
+## Path Parameters
+
+<ParamField path="id" type="integer" required>
+  Unique identifier of the tractor to retrieve. Must be a positive integer.
+</ParamField>
+
+## Response Fields
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  Tractor object with complete details
+  
+  <Expandable title="Tractor Object">
+    <ResponseField name="tractor_id" type="integer">
+      Unique identifier for the tractor
+    </ResponseField>
+    
+    <ResponseField name="name" type="string">
+      Display name of the tractor (e.g., "John Deere 6130M")
+    </ResponseField>
+    
+    <ResponseField name="brand" type="string">
+      Tractor brand/manufacturer
+    </ResponseField>
+    
+    <ResponseField name="model" type="string">
+      Tractor model identifier
+    </ResponseField>
+    
+    <ResponseField name="engine_power_hp" type="number">
+      Engine power in horsepower (HP)
+    </ResponseField>
+    
+    <ResponseField name="weight_kg" type="number">
+      Total weight in kilograms
+    </ResponseField>
+    
+    <ResponseField name="traction_force_kn" type="number">
+      Traction force in kilonewtons (kN)
+    </ResponseField>
+    
+    <ResponseField name="traction_type" type="string">
+      Type of traction system. Values: `4x2`, `4x4`, `track`
+    </ResponseField>
+    
+    <ResponseField name="tire_type" type="string">
+      Type of tires (e.g., "radial", "bias")
+    </ResponseField>
+    
+    <ResponseField name="tire_width_mm" type="number">
+      Tire width in millimeters
+    </ResponseField>
+    
+    <ResponseField name="tire_diameter_mm" type="number">
+      Tire diameter in millimeters
+    </ResponseField>
+    
+    <ResponseField name="tire_pressure_psi" type="number">
+      Recommended tire pressure in PSI
+    </ResponseField>
+    
+    <ResponseField name="status" type="string">
+      Current status. Values: `available`, `maintenance`, `inactive`
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X GET http://localhost:4000/api/tractors/1 \
+  -H "Content-Type: application/json"
+```
+
+```javascript JavaScript
+const tractorId = 1;
+
+const response = await fetch(`http://localhost:4000/api/tractors/${tractorId}`, {
+  method: 'GET',
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
+const data = await response.json();
+if (data.success) {
+  console.log(data.data); // Tractor object
+}
+```
+
+```python Python
+import requests
+
+tractor_id = 1
+
+response = requests.get(f'http://localhost:4000/api/tractors/{tractor_id}')
+
+data = response.json()
+if data['success']:
+    tractor = data['data']
+    print(f"Brand: {tractor['brand']}, Model: {tractor['model']}")
+```
+</CodeGroup>
+
+## Example Responses
+
+<CodeGroup>
+```json 200 OK
+{
+  "success": true,
+  "data": {
+    "tractor_id": 1,
+    "name": "John Deere 6130M",
+    "brand": "John Deere",
+    "model": "6130M",
+    "engine_power_hp": 130,
+    "weight_kg": 5200,
+    "traction_force_kn": 45.5,
+    "traction_type": "4x4",
+    "tire_type": "radial",
+    "tire_width_mm": 540,
+    "tire_diameter_mm": 1600,
+    "tire_pressure_psi": 15,
+    "status": "available"
+  }
+}
+```
+
+```json 400 Invalid ID
+{
+  "success": false,
+  "message": "ID de tractor inválido"
+}
+```
+
+```json 404 Not Found
+{
+  "success": false,
+  "message": "Tractor no encontrado"
+}
+```
+
+```json 500 Server Error
+{
+  "success": false,
+  "message": "Error interno del servidor"
+}
+```
+</CodeGroup>
+
+## Error Cases
+
+<AccordionGroup>
+  <Accordion title="400 Bad Request">
+    Returned when the provided ID is invalid (not a positive integer).
+    
+    **Examples of invalid IDs:**
+    - Negative numbers: `-1`
+    - Zero: `0`
+    - Non-numeric values: `abc`, `null`
+    - Decimal numbers: `1.5`
+  </Accordion>
+  
+  <Accordion title="404 Not Found">
+    Returned when no tractor exists with the specified ID.
+    
+    The ID may be valid, but the tractor might have been deleted or never existed.
+  </Accordion>
+  
+  <Accordion title="500 Internal Server Error">
+    Returned when an unexpected server error occurs (e.g., database connection issues).
+  </Accordion>
+</AccordionGroup>
+
+## Use Cases
+
+<CardGroup cols={2}>
+  <Card title="Tractor Details Page" icon="file-lines">
+    Display complete specifications for a specific tractor in your application
+  </Card>
+  <Card title="Equipment Comparison" icon="code-compare">
+    Fetch multiple tractors by ID to compare specifications side-by-side
+  </Card>
+  <Card title="Recommendation Context" icon="lightbulb">
+    Get detailed specs after receiving tractor recommendations
+  </Card>
+  <Card title="Verification" icon="circle-check">
+    Verify tractor exists and is available before creating calculations
+  </Card>
+</CardGroup>
+
+## Related Endpoints
+
+<CardGroup cols={2}>
+  <Card title="List All Tractors" icon="list" href="/api-reference/tractors/list">
+    Get paginated list of all tractors
+  </Card>
+  <Card title="Update Tractor" icon="pen" href="/api-reference/tractors/update">
+    Modify tractor details (admin only)
+  </Card>
+  <Card title="Delete Tractor" icon="trash" href="/api-reference/tractors/delete">
+    Remove tractor from catalog (admin only)
+  </Card>
+  <Card title="Search Tractors" icon="magnifying-glass" href="/api-reference/tractors/search">
+    Filter tractors by specifications
+  </Card>
+</CardGroup>

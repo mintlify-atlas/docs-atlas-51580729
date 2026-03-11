@@ -1,0 +1,299 @@
+---
+title: 'Generate Recommendations'
+api: 'POST /api/recommendations/generate'
+description: 'Generate intelligent tractor recommendations for a specific terrain and implement'
+---
+
+## Overview
+
+Generates smart tractor recommendations by analyzing terrain characteristics, implement requirements, and available tractors. The algorithm evaluates each tractor using a multi-criteria scoring system and returns the top 5 ranked recommendations.
+
+<Note>
+  This endpoint validates that the terrain belongs to the authenticated user.
+</Note>
+
+## Authentication
+
+Requires JWT authentication token in the Authorization header.
+
+```bash
+Authorization: Bearer <token>
+```
+
+## Request Body
+
+<ParamField body="terrain_id" type="number" required>
+  ID of the terrain where the work will be performed. Must belong to the authenticated user.
+</ParamField>
+
+<ParamField body="implement_id" type="number" required>
+  ID of the implement to be used.
+</ParamField>
+
+<ParamField body="working_depth_m" type="number" default="0.25">
+  Working depth in meters. If not provided, uses the implement's default working depth.
+</ParamField>
+
+<ParamField body="work_type" type="string" default="general">
+  Type of work to be performed.
+  
+  **Options:** `tillage`, `planting`, `harvesting`, `transport`, `general`
+</ParamField>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful.
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Success message.
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="queryId" type="number">
+      Unique identifier for this recommendation query.
+    </ResponseField>
+
+    <ResponseField name="implement" type="object">
+      Details of the implement used in the recommendation.
+      <Expandable title="properties">
+        <ResponseField name="id" type="number">
+          Implement ID
+        </ResponseField>
+        <ResponseField name="name" type="string">
+          Implement name
+        </ResponseField>
+        <ResponseField name="brand" type="string">
+          Implement brand
+        </ResponseField>
+        <ResponseField name="type" type="string">
+          Implement type (e.g., "plow", "planter")
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+
+    <ResponseField name="terrain" type="object">
+      Details of the terrain analyzed.
+      <Expandable title="properties">
+        <ResponseField name="id" type="number">
+          Terrain ID
+        </ResponseField>
+        <ResponseField name="name" type="string">
+          Terrain name
+        </ResponseField>
+        <ResponseField name="soil_type" type="string">
+          Soil type (e.g., "clay", "loam", "sandy")
+        </ResponseField>
+        <ResponseField name="slope_percentage" type="number">
+          Slope percentage
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+
+    <ResponseField name="powerRequirement" type="object">
+      Calculated power requirements.
+      <Expandable title="properties">
+        <ResponseField name="minimum_power_hp" type="number">
+          Minimum power required in horsepower
+        </ResponseField>
+        <ResponseField name="factors" type="object">
+          Factors used in power calculation
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+
+    <ResponseField name="recommendations" type="array">
+      Array of top 5 tractor recommendations, ranked by compatibility.
+      <Expandable title="recommendation object">
+        <ResponseField name="rank" type="number">
+          Ranking position (1 = best match)
+        </ResponseField>
+        <ResponseField name="tractor" type="object">
+          Tractor details
+          <Expandable title="properties">
+            <ResponseField name="id" type="number">Tractor ID</ResponseField>
+            <ResponseField name="name" type="string">Tractor name</ResponseField>
+            <ResponseField name="brand" type="string">Brand</ResponseField>
+            <ResponseField name="model" type="string">Model</ResponseField>
+            <ResponseField name="engine_power_hp" type="number">Engine power in HP</ResponseField>
+            <ResponseField name="traction_type" type="string">Traction type (e.g., "4x4")</ResponseField>
+          </Expandable>
+        </ResponseField>
+        <ResponseField name="score" type="object">
+          Scoring breakdown
+          <Expandable title="properties">
+            <ResponseField name="total" type="number">Total compatibility score (0-100)</ResponseField>
+            <ResponseField name="breakdown" type="object">Individual score components (efficiency, traction, soil, economic, availability)</ResponseField>
+          </Expandable>
+        </ResponseField>
+        <ResponseField name="classification" type="object">
+          Power classification
+          <Expandable title="properties">
+            <ResponseField name="label" type="string">OPTIMAL, GOOD, ACCEPTABLE, or OVERPOWERED</ResponseField>
+          </Expandable>
+        </ResponseField>
+        <ResponseField name="explanation" type="string">
+          Human-readable explanation of why this tractor was recommended
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Algorithm Details
+
+The recommendation engine follows this workflow:
+
+1. **Validates** terrain ownership (must belong to authenticated user)
+2. **Calculates** minimum power required for the implement on the terrain
+3. **Analyzes** terrain characteristics (slope, soil type)
+4. **Evaluates** each available tractor with multi-criteria scoring:
+   - **Efficiency**: Optimal power utilization
+   - **Traction**: Compatibility with slope and soil
+   - **Soil**: Adequacy for terrain type
+   - **Economic**: Cost-benefit ratio
+   - **Availability**: Tractor status
+5. **Returns** top 5 ranked tractors with detailed explanations
+6. **Persists** top 3 recommendations to database
+
+### Classification Labels
+
+- **OPTIMAL**: Perfect power fit for the task
+- **GOOD**: Good balance between power and need
+- **ACCEPTABLE**: Functional but not ideal
+- **OVERPOWERED**: Oversized for the task
+
+<RequestExample>
+```bash cURL
+curl -X POST https://api.maqagr.com/api/recommendations/generate \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "terrain_id": 1,
+    "implement_id": 2,
+    "working_depth_m": 0.25,
+    "work_type": "tillage"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.maqagr.com/api/recommendations/generate', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    terrain_id: 1,
+    implement_id: 2,
+    working_depth_m: 0.25,
+    work_type: 'tillage'
+  })
+});
+
+const data = await response.json();
+```
+
+```python Python
+import requests
+
+response = requests.post(
+  'https://api.maqagr.com/api/recommendations/generate',
+  headers={
+    'Authorization': f'Bearer {token}',
+    'Content-Type': 'application/json'
+  },
+  json={
+    'terrain_id': 1,
+    'implement_id': 2,
+    'working_depth_m': 0.25,
+    'work_type': 'tillage'
+  }
+)
+
+data = response.json()
+```
+</RequestExample>
+
+<ResponseExample>
+```json 200 - Success
+{
+  "success": true,
+  "message": "Recomendaciones generadas exitosamente",
+  "data": {
+    "queryId": 10,
+    "implement": {
+      "id": 2,
+      "name": "Arado de discos",
+      "brand": "Baldan",
+      "type": "plow"
+    },
+    "terrain": {
+      "id": 1,
+      "name": "Parcela Norte",
+      "soil_type": "clay",
+      "slope_percentage": 15
+    },
+    "powerRequirement": {
+      "minimum_power_hp": 95.5
+    },
+    "recommendations": [
+      {
+        "rank": 1,
+        "tractor": {
+          "id": 3,
+          "name": "John Deere 6130M",
+          "brand": "John Deere",
+          "model": "6130M",
+          "engine_power_hp": 130,
+          "traction_type": "4x4"
+        },
+        "score": {
+          "total": 87.5
+        },
+        "classification": {
+          "label": "OPTIMAL"
+        },
+        "explanation": "Alta eficiencia energética (85% utilización). Ajuste óptimo de potencia."
+      }
+    ]
+  }
+}
+```
+
+```json 400 - Missing Required Fields
+{
+  "success": false,
+  "message": "Campos requeridos: terrain_id, implement_id"
+}
+```
+
+```json 401 - Unauthorized
+{
+  "success": false,
+  "message": "Usuario no autenticado"
+}
+```
+
+```json 404 - Terrain Not Found
+{
+  "success": false,
+  "message": "Terreno no encontrado o no accesible"
+}
+```
+
+```json 404 - No Tractors Available
+{
+  "success": false,
+  "message": "No hay tractores disponibles en el sistema"
+}
+```
+</ResponseExample>
+
+## Source Code Reference
+
+- Route: `src/routes/recommendation.routes.js:139`
+- Controller: `src/controllers/recommendationController.js:141`
+- Service: `src/services/recommendationService.js`

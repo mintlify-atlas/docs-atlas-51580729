@@ -1,0 +1,376 @@
+---
+title: 'Create Tractor'
+description: 'Add a new tractor to the catalog (admin only)'
+---
+
+# Create Tractor
+
+Create a new tractor in the catalog. This endpoint requires administrator authentication.
+
+<Warning>
+  **Admin Access Required** - This endpoint requires a valid JWT token with `role_id: 1` (administrator).
+</Warning>
+
+## Endpoint
+
+```
+POST /api/tractors
+```
+
+## Authentication
+
+This endpoint requires both authentication and administrator privileges:
+
+```http
+Authorization: Bearer <jwt_token>
+```
+
+See the [Authentication](/authentication) guide for details on obtaining and using JWT tokens.
+
+## Request Body
+
+<ParamField body="brand" type="string" required>
+  Tractor brand/manufacturer name. Cannot be empty.
+  
+  **Example:** `"John Deere"`, `"Case IH"`, `"New Holland"`
+</ParamField>
+
+<ParamField body="model" type="string" required>
+  Tractor model identifier. Cannot be empty.
+  
+  **Example:** `"6130M"`, `"Magnum 280"`, `"T7.315"`
+</ParamField>
+
+<ParamField body="engine_power_hp" type="number" required>
+  Engine power in horsepower (HP). Must be a positive number.
+  
+  **Example:** `130`, `280`, `315.5`
+</ParamField>
+
+<ParamField body="traction_type" type="string" required>
+  Type of traction system. Must be one of: `4x2`, `4x4`, `track`
+  
+  - `4x2` - Two-wheel drive
+  - `4x4` - Four-wheel drive
+  - `track` - Track/crawler system
+</ParamField>
+
+<ParamField body="name" type="string">
+  Display name for the tractor. If not provided, defaults to `brand + model`.
+  
+  **Example:** `"John Deere 6130M Premium"`
+</ParamField>
+
+<ParamField body="weight_kg" type="number">
+  Total weight in kilograms. Must be a positive number if provided.
+  
+  **Example:** `5200`, `11200.5`
+</ParamField>
+
+<ParamField body="traction_force_kn" type="number">
+  Traction force in kilonewtons (kN). Must be a positive number if provided.
+  
+  **Example:** `45.5`, `85.3`
+</ParamField>
+
+<ParamField body="tire_type" type="string">
+  Type of tires installed on the tractor.
+  
+  **Example:** `"radial"`, `"bias"`, `"dual radial"`
+</ParamField>
+
+<ParamField body="tire_width_mm" type="number">
+  Tire width in millimeters. Must be a positive number if provided.
+  
+  **Example:** `540`, `710`
+</ParamField>
+
+<ParamField body="tire_diameter_mm" type="number">
+  Tire diameter in millimeters. Must be a positive number if provided.
+  
+  **Example:** `1600`, `1880`
+</ParamField>
+
+<ParamField body="tire_pressure_psi" type="number">
+  Recommended tire pressure in PSI. Must be a positive number if provided.
+  
+  **Example:** `15`, `18`, `12.5`
+</ParamField>
+
+<ParamField body="status" type="string" default="available">
+  Current status of the tractor. Must be one of: `available`, `maintenance`, `inactive`
+  
+  Defaults to `available` if not specified.
+</ParamField>
+
+## Response Fields
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  The newly created tractor object with all fields, including the generated `tractor_id`
+</ResponseField>
+
+## Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X POST http://localhost:4000/api/tractors \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -d '{
+    "name": "John Deere 6130M",
+    "brand": "John Deere",
+    "model": "6130M",
+    "engine_power_hp": 130,
+    "weight_kg": 5200,
+    "traction_force_kn": 45.5,
+    "traction_type": "4x4",
+    "tire_type": "radial",
+    "tire_width_mm": 540,
+    "tire_diameter_mm": 1600,
+    "tire_pressure_psi": 15,
+    "status": "available"
+  }'
+```
+
+```javascript JavaScript
+const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...';
+
+const response = await fetch('http://localhost:4000/api/tractors', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  },
+  body: JSON.stringify({
+    name: 'John Deere 6130M',
+    brand: 'John Deere',
+    model: '6130M',
+    engine_power_hp: 130,
+    weight_kg: 5200,
+    traction_force_kn: 45.5,
+    traction_type: '4x4',
+    tire_type: 'radial',
+    tire_width_mm: 540,
+    tire_diameter_mm: 1600,
+    tire_pressure_psi: 15,
+    status: 'available'
+  })
+});
+
+const data = await response.json();
+if (data.success) {
+  console.log('Tractor created:', data.data.tractor_id);
+}
+```
+
+```python Python
+import requests
+
+token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+
+response = requests.post(
+    'http://localhost:4000/api/tractors',
+    headers={
+        'Content-Type': 'application/json',
+        'Authorization': f'Bearer {token}'
+    },
+    json={
+        'name': 'John Deere 6130M',
+        'brand': 'John Deere',
+        'model': '6130M',
+        'engine_power_hp': 130,
+        'weight_kg': 5200,
+        'traction_force_kn': 45.5,
+        'traction_type': '4x4',
+        'tire_type': 'radial',
+        'tire_width_mm': 540,
+        'tire_diameter_mm': 1600,
+        'tire_pressure_psi': 15,
+        'status': 'available'
+    }
+)
+
+data = response.json()
+if data['success']:
+    print(f"Tractor created with ID: {data['data']['tractor_id']}")
+```
+</CodeGroup>
+
+## Example Responses
+
+<CodeGroup>
+```json 201 Created
+{
+  "success": true,
+  "data": {
+    "tractor_id": 15,
+    "name": "John Deere 6130M",
+    "brand": "John Deere",
+    "model": "6130M",
+    "engine_power_hp": 130,
+    "weight_kg": 5200,
+    "traction_force_kn": 45.5,
+    "traction_type": "4x4",
+    "tire_type": "radial",
+    "tire_width_mm": 540,
+    "tire_diameter_mm": 1600,
+    "tire_pressure_psi": 15,
+    "status": "available"
+  }
+}
+```
+
+```json 400 Validation Error
+{
+  "success": false,
+  "errors": [
+    "brand es requerido",
+    "engine_power_hp debe ser un número positivo",
+    "traction_type debe ser uno de: 4x2, 4x4, track"
+  ]
+}
+```
+
+```json 401 Unauthorized
+{
+  "success": false,
+  "message": "Token no proporcionado"
+}
+```
+
+```json 403 Forbidden
+{
+  "success": false,
+  "message": "Acceso denegado. Se requiere rol de administrador"
+}
+```
+
+```json 500 Server Error
+{
+  "success": false,
+  "message": "Error interno del servidor"
+}
+```
+</CodeGroup>
+
+## Validation Rules
+
+### Required Fields (POST only)
+
+<Steps>
+  <Step title="Brand Validation">
+    - Must be provided
+    - Must be a non-empty string
+    - Cannot contain only whitespace
+  </Step>
+  
+  <Step title="Model Validation">
+    - Must be provided
+    - Must be a non-empty string
+    - Cannot contain only whitespace
+  </Step>
+  
+  <Step title="Engine Power Validation">
+    - Must be provided
+    - Must be a number
+    - Must be greater than 0
+  </Step>
+  
+  <Step title="Traction Type Validation">
+    - Must be provided
+    - Must be one of: `4x2`, `4x4`, `track`
+  </Step>
+</Steps>
+
+### Optional Field Validation
+
+<AccordionGroup>
+  <Accordion title="Numeric Fields">
+    The following fields must be positive numbers if provided:
+    - `engine_power_hp`
+    - `weight_kg`
+    - `fuel_tank_l` (if your database schema includes it)
+    
+    **Invalid values:** `0`, `-10`, `"abc"`, `null`
+  </Accordion>
+  
+  <Accordion title="Status Field">
+    If provided, must be one of:
+    - `available` (default)
+    - `maintenance`
+    - `inactive`
+  </Accordion>
+  
+  <Accordion title="Traction Type">
+    Must be one of:
+    - `4x2` - Two-wheel drive
+    - `4x4` - Four-wheel drive (most common)
+    - `track` - Track/crawler system
+  </Accordion>
+</AccordionGroup>
+
+## Error Responses
+
+<AccordionGroup>
+  <Accordion title="400 Bad Request - Validation Errors">
+    Returned when request body fails validation. The response includes an `errors` array with specific validation messages.
+    
+    **Common validation errors:**
+    - `"brand es requerido"` - Brand field is missing
+    - `"model es requerido"` - Model field is missing
+    - `"engine_power_hp es requerido"` - Power field is missing
+    - `"engine_power_hp debe ser un número positivo"` - Invalid power value
+    - `"traction_type es requerido"` - Traction type is missing
+    - `"traction_type debe ser uno de: 4x2, 4x4, track"` - Invalid traction type
+    - `"status debe ser uno de: available, maintenance, inactive"` - Invalid status
+  </Accordion>
+  
+  <Accordion title="401 Unauthorized - Missing Token">
+    Returned when no authentication token is provided in the request.
+    
+    **Solution:** Include a valid JWT token in the `Authorization` header.
+  </Accordion>
+  
+  <Accordion title="401 Unauthorized - Invalid Token">
+    Returned when the token is malformed, expired, or invalid.
+    
+    **Solution:** Login again to obtain a fresh token.
+  </Accordion>
+  
+  <Accordion title="403 Forbidden - Insufficient Permissions">
+    Returned when the authenticated user is not an administrator (`role_id !== 1`).
+    
+    **Solution:** This endpoint is restricted to administrators only. Regular users cannot create tractors.
+  </Accordion>
+  
+  <Accordion title="500 Internal Server Error">
+    Returned when an unexpected server error occurs (e.g., database connection issues, constraint violations).
+  </Accordion>
+</AccordionGroup>
+
+## Cache Invalidation
+
+<Info>
+  Creating a new tractor automatically invalidates all tractor-related caches. This ensures that GET requests to `/api/tractors` and search endpoints immediately reflect the new tractor.
+</Info>
+
+## Related Endpoints
+
+<CardGroup cols={2}>
+  <Card title="List Tractors" icon="list" href="/api-reference/tractors/list">
+    View all tractors in the catalog
+  </Card>
+  <Card title="Update Tractor" icon="pen" href="/api-reference/tractors/update">
+    Modify existing tractor details
+  </Card>
+  <Card title="Delete Tractor" icon="trash" href="/api-reference/tractors/delete">
+    Remove tractor from catalog
+  </Card>
+  <Card title="Authentication" icon="key" href="/authentication">
+    Learn how to obtain admin credentials
+  </Card>
+</CardGroup>

@@ -1,0 +1,31 @@
+---
+title: 'Get Role by ID'
+api: 'GET /api/roles/{id}'
+description: 'Get details of a specific role'
+---
+
+<Warning>
+  This endpoint is not currently implemented in the API. The role system only supports listing all roles via GET /api/roles.
+  
+  If you need to retrieve a specific role, use the [List Roles](/api-reference/roles/list) endpoint and filter the results on the client side.
+</Warning>
+
+## Alternative: List All Roles
+
+To get information about a specific role, use the List Roles endpoint and find the role by ID:
+
+```javascript
+const response = await fetch('https://api.maqagr.com/api/roles', {
+  headers: {
+    'Authorization': `Bearer ${token}`
+  }
+});
+
+const data = await response.json();
+const role = data.data.roles.find(r => r.role_id === 1);
+```
+
+## Source Code Reference
+
+- Routes file: `src/routes/role.routes.js`
+- Controller file: `src/controllers/roleController.js`

@@ -1,97 +1,124 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "MaqAgr API Documentation"
+description: "Backend REST API para gestión integral de maquinaria agrícola con cálculos de potencia y recomendaciones inteligentes"
 ---
 
-## Setting up
+<div style={{
+  background: 'linear-gradient(135deg, #94cb04 0%, #7aa503 100%)',
+  padding: '3rem 2rem',
+  borderRadius: '8px',
+  color: 'white',
+  marginBottom: '2rem'
+}}>
+  <h1 style={{ color: 'white', fontSize: '48px', fontWeight: '700', marginBottom: '1rem' }}>
+    MaqAgr API
+  </h1>
+  <p style={{ color: 'white', fontSize: '18px', opacity: 0.95, maxWidth: '800px' }}>
+    Sistema integral para la gestión de tractores, implementos agrícolas y terrenos. Incluye cálculos de potencia, pérdidas energéticas y recomendaciones inteligentes basadas en física aplicada.
+  </p>
+</div>
 
-Get your documentation site up and running in minutes.
+## Get Started
 
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
+Start using the MaqAgr API in minutes.
 
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
+<CardGroup cols={2}>
   <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
+    title="Quickstart"
+    icon="rocket"
+    href="/quickstart"
   >
-    Edit your docs locally and preview them in real time.
+    Set up the API and make your first request in under 5 minutes
   </Card>
   <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
+    title="Authentication"
+    icon="lock"
+    href="/authentication"
   >
-    Customize the design and colors of your site to match your brand.
+    Learn how to authenticate using JWT tokens
   </Card>
-    <Card
-    title="Set up navigation"
+</CardGroup>
+
+## Core Resources
+
+Manage your agricultural machinery inventory and terrain data.
+
+<CardGroup cols={3}>
+  <Card
+    title="Tractors"
+    icon="tractor"
+    href="/resources/tractors"
+  >
+    Complete tractor catalog with specifications
+  </Card>
+  <Card
+    title="Implements"
+    icon="wrench"
+    href="/resources/implements"
+  >
+    Agricultural implements and equipment
+  </Card>
+  <Card
+    title="Terrains"
     icon="map"
-    href="/essentials/navigation"
+    href="/resources/terrains"
   >
-    Organize your docs to help users find what they need and succeed with your product.
+    Terrain characterization and management
+  </Card>
+</CardGroup>
+
+## Advanced Features
+
+Leverage powerful calculations and intelligent recommendations.
+
+<CardGroup cols={2}>
+  <Card
+    title="Power Calculations"
+    icon="bolt"
+    href="/features/calculations"
+  >
+    Calculate power losses and minimum power requirements
   </Card>
   <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
+    title="Recommendations"
+    icon="lightbulb"
+    href="/features/recommendations"
   >
-    Auto-generate API documentation from OpenAPI specifications.
+    Get intelligent tractor recommendations for your tasks
   </Card>
-</Columns>
+</CardGroup>
 
-## Create beautiful pages
+## API Reference
 
-Everything you need to create world-class documentation.
+Explore the complete API documentation.
 
-<Columns cols={2}>
+<CardGroup cols={2}>
   <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
+    title="Authentication Endpoints"
+    icon="key"
+    href="/api-reference/auth/register"
   >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
+    User registration, login, and profile management
   </Card>
   <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
+    title="Resource Endpoints"
+    icon="database"
+    href="/api-reference/tractors/list"
   >
-    Display images and other media.
+    CRUD operations for tractors, implements, and terrains
   </Card>
   <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
+    title="Calculations"
+    icon="calculator"
+    href="/api-reference/calculations/power-loss"
   >
-    Write once and reuse across your docs.
+    Power loss and minimum power calculations
   </Card>
-</Columns>
-
-## Need inspiration?
-
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+  <Card
+    title="Recommendations"
+    icon="stars"
+    href="/api-reference/recommendations/generate"
+  >
+    Generate intelligent tractor recommendations
+  </Card>
+</CardGroup>

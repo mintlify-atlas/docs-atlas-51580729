@@ -1,0 +1,281 @@
+---
+title: 'Calculate Power Loss'
+description: 'Calculate power losses for a tractor operating on specific terrain'
+openapi: 'POST /api/calculations/power-loss'
+---
+
+## Overview
+
+Calculates the power losses of a tractor operating on specific terrain conditions. The calculation considers multiple loss factors including slope, altitude, rolling resistance, and wheel slippage.
+
+The result is persisted in the database with audit logging for historical tracking and analysis.
+
+## Loss Factors Calculated
+
+The endpoint computes four primary loss factors:
+
+- **Slope Loss**: Power loss due to terrain inclination
+- **Altitude Loss**: Power loss due to altitude above sea level (air density reduction)
+- **Rolling Resistance**: Loss according to soil type (based on ASABE D497.7 Cone Index)
+- **Slippage Loss**: Power loss due to wheel slip
+
+## Authentication
+
+This endpoint requires authentication via Bearer token in the Authorization header.
+
+```bash
+Authorization: Bearer <your_token>
+```
+
+## Request Body
+
+<ParamField body="tractor_id" type="integer" required>
+  ID of the tractor to evaluate. Must be a positive integer greater than 0.
+</ParamField>
+
+<ParamField body="terrain_id" type="integer" required>
+  ID of the terrain where the tractor will operate. Must be a positive integer greater than 0.
+</ParamField>
+
+<ParamField body="working_speed_kmh" type="number" required>
+  Working speed in kilometers per hour. Must be greater than 0 and less than 40 km/h.
+  
+  **Validation**: 0 &lt; working_speed_kmh &lt; 40
+</ParamField>
+
+<ParamField body="carried_objects_weight_kg" type="number" default="0">
+  Weight of carried objects/implements in kilograms. Must be non-negative.
+  
+  **Default**: 0
+  
+  **Validation**: carried_objects_weight_kg >= 0
+</ParamField>
+
+<ParamField body="slippage_percent" type="number" default="10">
+  Wheel slippage percentage. Typical values range from 5% to 20%.
+  
+  **Default**: 10
+</ParamField>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Indicates whether the calculation was successful.
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Human-readable message describing the result.
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  Container for calculation results.
+  
+  <Expandable title="data properties">
+    <ResponseField name="queryId" type="integer">
+      Unique identifier for this calculation query, used for audit and history tracking.
+    </ResponseField>
+    
+    <ResponseField name="tractor" type="object">
+      Information about the evaluated tractor.
+      
+      <Expandable title="tractor properties">
+        <ResponseField name="brand" type="string">
+          Tractor brand name.
+        </ResponseField>
+        
+        <ResponseField name="model" type="string">
+          Tractor model name.
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="terrain" type="object">
+      Information about the terrain conditions.
+      
+      <Expandable title="terrain properties">
+        <ResponseField name="name" type="string">
+          Terrain name or location.
+        </ResponseField>
+        
+        <ResponseField name="soil_type" type="string">
+          Type of soil (e.g., clay, loam, sand, firm, soft).
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="losses" type="object">
+      Breakdown of power losses by factor.
+      
+      <Expandable title="losses properties">
+        <ResponseField name="slope_loss_hp" type="number">
+          Power loss due to terrain slope, in horsepower (HP).
+        </ResponseField>
+        
+        <ResponseField name="altitude_loss_hp" type="number">
+          Power loss due to altitude (air density), in horsepower (HP).
+        </ResponseField>
+        
+        <ResponseField name="rolling_resistance_loss_hp" type="number">
+          Power loss due to rolling resistance based on soil type, in horsepower (HP).
+        </ResponseField>
+        
+        <ResponseField name="slippage_loss_hp" type="number">
+          Power loss due to wheel slippage, in horsepower (HP).
+        </ResponseField>
+        
+        <ResponseField name="total_loss_hp" type="number">
+          Total combined power loss, in horsepower (HP).
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="net_power_hp" type="number">
+      Available net power after all losses, in horsepower (HP).
+    </ResponseField>
+    
+    <ResponseField name="engine_power_hp" type="number">
+      Gross engine power of the tractor, in horsepower (HP).
+    </ResponseField>
+    
+    <ResponseField name="efficiency_percentage" type="number">
+      Overall efficiency percentage: (net_power / engine_power) × 100.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Request Example
+
+```bash
+curl -X POST https://api.maqagr.com/api/calculations/power-loss \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tractor_id": 1,
+    "terrain_id": 1,
+    "working_speed_kmh": 7.5,
+    "carried_objects_weight_kg": 500,
+    "slippage_percent": 10
+  }'
+```
+
+## Response Example
+
+```json
+{
+  "success": true,
+  "message": "Cálculo realizado con éxito",
+  "data": {
+    "queryId": 123,
+    "tractor": {
+      "brand": "John Deere",
+      "model": "7230R"
+    },
+    "terrain": {
+      "name": "Campo Norte",
+      "soil_type": "loam"
+    },
+    "losses": {
+      "slope_loss_hp": 12.5,
+      "altitude_loss_hp": 8.3,
+      "rolling_resistance_loss_hp": 15.7,
+      "slippage_loss_hp": 9.2,
+      "total_loss_hp": 45.7
+    },
+    "net_power_hp": 184.3,
+    "engine_power_hp": 230,
+    "efficiency_percentage": 80.13
+  }
+}
+```
+
+## Error Responses
+
+<ResponseField name="400 Bad Request" type="object">
+  Returned when required fields are missing or validation fails.
+  
+  ```json
+  {
+    "success": false,
+    "message": "Faltan campos requeridos: tractor_id, terrain_id, working_speed_kmh"
+  }
+  ```
+  
+  Or for validation errors:
+  
+  ```json
+  {
+    "error": "working_speed_kmh debe ser menor a 40 km/h (velocidad agrícola razonable)"
+  }
+  ```
+</ResponseField>
+
+<ResponseField name="401 Unauthorized" type="object">
+  Returned when the authentication token is missing or invalid.
+  
+  ```json
+  {
+    "success": false,
+    "message": "Token no proporcionado o inválido"
+  }
+  ```
+</ResponseField>
+
+<ResponseField name="404 Not Found" type="object">
+  Returned when the specified tractor or terrain is not found.
+  
+  ```json
+  {
+    "success": false,
+    "message": "Tractor no encontrado"
+  }
+  ```
+  
+  Or:
+  
+  ```json
+  {
+    "success": false,
+    "message": "Terreno no encontrado"
+  }
+  ```
+</ResponseField>
+
+<ResponseField name="500 Internal Server Error" type="object">
+  Returned when an unexpected error occurs during processing.
+  
+  ```json
+  {
+    "success": false,
+    "message": "Error interno del servidor"
+  }
+  ```
+</ResponseField>
+
+## Validation Rules
+
+| Parameter | Type | Required | Validation |
+|-----------|------|----------|------------|
+| `tractor_id` | integer | Yes | Must be &gt; 0 |
+| `terrain_id` | integer | Yes | Must be &gt; 0 |
+| `working_speed_kmh` | number | Yes | 0 &lt; value &lt; 40 |
+| `carried_objects_weight_kg` | number | Yes | Must be &gt;= 0 |
+| `slippage_percent` | number | No | Defaults to 10 |
+
+## Soil Type Cone Index (Cn) Mapping
+
+The rolling resistance calculation uses the ASABE D497.7 Cone Index standard:
+
+| Soil Type | Cone Index (Cn) |
+|-----------|----------------|
+| Clay / Arcilla | 45 |
+| Loam / Franco | 35 (default) |
+| Sand / Arena | 25 |
+| Firm / Firme | 50 |
+| Soft / Suave | 20 |
+
+## Notes
+
+- All calculations are persisted to the database with audit logging
+- The `queryId` can be used to retrieve calculation history via the `/api/calculations/history` endpoint
+- Default temperature of 15°C is used if not specified in terrain data
+- Results are logged for analytics and performance tracking (src/controllers/calculationController.js:144-152)

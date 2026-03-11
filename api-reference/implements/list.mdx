@@ -1,0 +1,277 @@
+---
+title: 'List Implements'
+description: 'Retrieve a paginated list of all agricultural implements with optional filtering'
+---
+
+# List Implements
+
+Retrieve all agricultural implements from the catalog with pagination and optional search filters. This is a public endpoint that does not require authentication.
+
+## Endpoint
+
+```
+GET /api/implements
+```
+
+## Query Parameters
+
+<ParamField query="limit" type="integer" default="10">
+  Number of records per page (pagination limit)
+</ParamField>
+
+<ParamField query="offset" type="integer" default="0">
+  Number of records to skip (pagination offset)
+</ParamField>
+
+<ParamField query="page" type="integer" default="1">
+  Page number (alternative to offset)
+</ParamField>
+
+<ParamField query="sort" type="string">
+  Field to sort by (e.g., `implement_type`, `brand`, `power_requirement_hp`)
+</ParamField>
+
+<ParamField query="order" type="string" default="asc">
+  Sort order: `asc` or `desc`
+</ParamField>
+
+## Response
+
+Returns a paginated list of implements with metadata.
+
+### Response Schema
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="array">
+  Array of implement objects
+  
+  <Expandable title="Implement Object">
+    <ResponseField name="implement_id" type="integer">
+      Unique implement identifier
+    </ResponseField>
+    
+    <ResponseField name="implement_name" type="string">
+      Name of the implement
+    </ResponseField>
+    
+    <ResponseField name="brand" type="string">
+      Manufacturer brand
+    </ResponseField>
+    
+    <ResponseField name="power_requirement_hp" type="number">
+      Required horsepower (HP) to operate the implement
+    </ResponseField>
+    
+    <ResponseField name="working_width_m" type="number">
+      Working width in meters
+    </ResponseField>
+    
+    <ResponseField name="soil_type" type="string">
+      Compatible soil type (e.g., "Loam", "Clay", "Sandy", "All")
+    </ResponseField>
+    
+    <ResponseField name="working_depth_cm" type="number">
+      Working depth in centimeters (for plows, cultivators)
+    </ResponseField>
+    
+    <ResponseField name="weight_kg" type="number">
+      Implement weight in kilograms
+    </ResponseField>
+    
+    <ResponseField name="implement_type" type="string">
+      Type of implement. Valid values:
+      - `plow` - Disc or moldboard plows
+      - `harrow` - Disc or tine harrows
+      - `seeder` - Seed planting equipment
+      - `sprayer` - Pesticide/fertilizer sprayers
+      - `harvester` - Harvesting equipment
+      - `cultivator` - Soil cultivation tools
+      - `mower` - Mowing equipment
+      - `trailer` - Agricultural trailers
+      - `other` - Other agricultural implements
+    </ResponseField>
+    
+    <ResponseField name="status" type="string">
+      Current status: `available`, `maintenance`, or `inactive`
+    </ResponseField>
+    
+    <ResponseField name="registration_date" type="string">
+      ISO 8601 timestamp of when the implement was registered
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="pagination" type="object">
+  Pagination metadata
+  
+  <Expandable title="Pagination Object">
+    <ResponseField name="page" type="integer">
+      Current page number
+    </ResponseField>
+    
+    <ResponseField name="limit" type="integer">
+      Records per page
+    </ResponseField>
+    
+    <ResponseField name="total" type="integer">
+      Total number of implements matching the query
+    </ResponseField>
+    
+    <ResponseField name="totalPages" type="integer">
+      Total number of pages
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Examples
+
+<CodeGroup>
+```bash cURL
+curl -X GET "http://localhost:4000/api/implements?limit=10&page=1" \
+  -H "Content-Type: application/json"
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:4000/api/implements?limit=10&page=1', {
+  method: 'GET',
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
+const data = await response.json();
+console.log(data.data); // Array of implements
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    'http://localhost:4000/api/implements',
+    params={'limit': 10, 'page': 1}
+)
+
+implements = response.json()['data']
+print(f"Found {len(implements)} implements")
+```
+</CodeGroup>
+
+### Response Example (200 OK)
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "implement_id": 1,
+      "implement_name": "3-body disc plow",
+      "brand": "Baldan",
+      "power_requirement_hp": 50,
+      "working_width_m": 0.9,
+      "soil_type": "Loam",
+      "working_depth_cm": 25,
+      "weight_kg": 320,
+      "implement_type": "plow",
+      "status": "available",
+      "registration_date": "2026-01-15T10:00:00.000Z"
+    },
+    {
+      "implement_id": 2,
+      "implement_name": "20-disc harrow",
+      "brand": "Tatu",
+      "power_requirement_hp": 35,
+      "working_width_m": 1.8,
+      "soil_type": "All",
+      "working_depth_cm": 15,
+      "weight_kg": 280,
+      "implement_type": "harrow",
+      "status": "available",
+      "registration_date": "2026-01-20T14:30:00.000Z"
+    },
+    {
+      "implement_id": 3,
+      "implement_name": "5-row seeder",
+      "brand": "Semeato",
+      "power_requirement_hp": 40,
+      "working_width_m": 1.5,
+      "soil_type": "Loam",
+      "working_depth_cm": 10,
+      "weight_kg": 450,
+      "implement_type": "seeder",
+      "status": "available",
+      "registration_date": "2026-02-01T09:00:00.000Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "total": 15,
+    "totalPages": 2
+  }
+}
+```
+
+## Advanced Filtering
+
+### Get Available Implements Only
+
+To retrieve only implements with `status: available`, use the `/api/implements/available` endpoint:
+
+```bash
+curl -X GET "http://localhost:4000/api/implements/available?limit=10"
+```
+
+See the [Get Available Implements](/api-reference/implements/get#available-implements) section for details.
+
+### Search with Filters
+
+For advanced filtering by type, soil compatibility, and power requirements, use the `/api/implements/search` endpoint:
+
+```bash
+curl -X GET "http://localhost:4000/api/implements/search?type=plow&soilType=Loam&maxPower=60"
+```
+
+See [Search Implements](/api-reference/implements/get#search-implements) for more information.
+
+## Error Responses
+
+### Internal Server Error (500)
+
+```json
+{
+  "success": false,
+  "message": "Error al obtener implementos"
+}
+```
+
+## Related Endpoints
+
+<CardGroup cols={2}>
+  <Card title="Get Implement" icon="magnifying-glass" href="/api-reference/implements/get">
+    Retrieve a specific implement by ID or search with filters
+  </Card>
+  <Card title="Create Implement" icon="plus" href="/api-reference/implements/create">
+    Add a new implement to the catalog (Admin only)
+  </Card>
+  <Card title="Update Implement" icon="pen" href="/api-reference/implements/update">
+    Modify an existing implement (Admin only)
+  </Card>
+  <Card title="Delete Implement" icon="trash" href="/api-reference/implements/delete">
+    Remove an implement from the catalog (Admin only)
+  </Card>
+</CardGroup>
+
+<Note>
+Implements are sorted by `implement_type` and `brand` by default. Use the `sort` and `order` parameters to customize sorting.
+</Note>
+
+## Implementation Notes
+
+- **Source**: `src/routes/implement.routes.js:80` - Route definition
+- **Controller**: `src/controllers/implementController.js:31` - `getAllImplements` function
+- **Model**: `src/models/Implement.js:5` - Database query: `SELECT * FROM implement ORDER BY implement_type, brand`
+- **Caching**: This endpoint uses cache middleware with 24-hour TTL (86400 seconds)
+- **Public Access**: No authentication required

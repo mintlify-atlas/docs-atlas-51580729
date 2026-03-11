@@ -1,0 +1,831 @@
+---
+title: 'Tractor Recommendations'
+description: 'Intelligent multi-criteria scoring algorithm for optimal tractor-implement-terrain matching'
+icon: 'stars'
+---
+
+<Note>
+The recommendation engine uses a **deterministic multi-criteria scoring algorithm** that evaluates efficiency, traction, soil compatibility, economics, and availability to rank tractors from 0-100 points.
+</Note>
+
+## Overview
+
+The MaqAgr recommendation system acts as an "agricultural matchmaker" that analyzes your terrain, implement requirements, and available tractors to suggest the optimal equipment for your operation.
+
+**Key Features:**
+- ✅ Multi-factor scoring (efficiency, traction, soil, economics, availability)
+- ✅ Mandatory 4WD detection for steep slopes (>15%)
+- ✅ Penalizes over-powered tractors (fuel waste)
+- ✅ Considers soil-traction compatibility
+- ✅ Ownership validation (users only access their terrains)
+
+---
+
+## The Recommendation Algorithm
+
+### Scoring Weights
+
+Each tractor receives a score from **0-100 points** based on five weighted criteria:
+
+| Criterion | Weight | Description |
+|-----------|--------|-------------|
+| **Efficiency** | 30% | Penalizes over-dimensioning (fuel waste) |
+| **Traction** | 25% | Bonus for 4WD on slopes, penalizes 2WD |
+| **Soil** | 20% | Tire/track compatibility with soil type |
+| **Economic** | 15% | Prefers lower power (when adequate) |
+| **Availability** | 10% | Tractor status (available, in-use, maintenance) |
+
+<Note>
+Weights are configured in `SCORING_CONFIG` and sum to exactly 100%.
+</Note>
+
+---
+
+## Scoring Components
+
+### 1. Efficiency Score (30 points)
+
+Penalizes tractors with excessive power for the task.
+
+**Formula:**
+
+```javascript
+ratio = tractorPower / requiredPower
+
+if (ratio <= 1.0) {
+  score = 30  // Perfect match
+} else if (ratio <= 1.3) {
+  // Linear decrease from 30 to 15 pts
+  score = 30 - ((ratio - 1.0) / 0.3) × 15
+} else {
+  // Aggressive penalty beyond 130%
+  score = 15 - (ratio - 1.3) × 30
+}
+```
+
+**Scoring Table:**
+
+| Power Ratio | Utilization | Score | Interpretation |
+|-------------|-------------|-------|----------------|
+| 1.0 (100%) | 100% | 30 pts | ⭐ Perfect efficiency |
+| 1.15 (115%) | 87% | 22.5 pts | ✅ Good match |
+| 1.3 (130%) | 77% | 15 pts | ⚠️ Threshold |
+| 1.5 (150%) | 67% | 9 pts | ❌ Wasteful |
+| 2.0 (200%) | 50% | -6 pts | 🚫 Excessive |
+
+**Example:**
+
+Required: 85 HP, Tractor: 110 HP
+```
+ratio = 110 / 85 = 1.294
+score = 30 - ((1.294 - 1.0) / 0.3) × 15 = 15.3 pts
+```
+
+---
+
+### 2. Traction Score (25 points)
+
+Rewards appropriate traction systems for terrain conditions.
+
+**Traction Bonus Matrix:**
+
+| Traction Type | Flat Terrain | Rolling (5-15%) | Steep (>15%) |
+|---------------|--------------|-----------------|---------------|
+| **4x4 / 4WD** | +5 pts | +15 pts | +25 pts |
+| **Track (Oruga)** | 0 pts | +20 pts | +30 pts |
+| **4x2 / 2WD** | +10 pts | 0 pts | **-50 pts** |
+
+**Slope Classification:**
+
+```javascript
+if (slope < 5%) → 'FLAT'
+if (slope < 15%) → 'ROLLING'
+if (slope >= 15%) → 'STEEP'
+```
+
+**Critical Rule:**
+> Tractors **without 4WD are automatically filtered out** for slopes &gt;15% (they don't even reach the scoring phase).
+
+**Normalization:**
+
+The bonus range (-50 to +30) is normalized to 0-25 score points:
+
+```
+score = ((bonus + 50) / 80) × 25
+```
+
+**Example:**
+
+4WD tractor on 12% slope (ROLLING):
+```
+bonus = +15
+score = ((15 + 50) / 80) × 25 = 20.3 pts
+```
+
+---
+
+### 3. Soil Compatibility Score (20 points)
+
+Evaluates tire/track suitability for soil conditions.
+
+**Soil Difficulty Index:**
+
+| Soil Type | Difficulty | Preferred Tire | Description |
+|-----------|------------|----------------|-------------|
+| **Sandy (Arena)** | 20/100 | Standard | Easy, low resistance |
+| **Loam (Franco)** | 40/100 | Standard | Moderate |
+| **Clay (Arcilla)** | 70/100 | Track | Difficult, sticky |
+| **Rocky (Rocoso)** | 85/100 | Reinforced | Very difficult |
+| **Wet Clay** | 95/100 | Track | Extreme conditions |
+
+**Scoring Logic:**
+
+<Steps>
+  <Step title="Base Score">
+    Start with 10 points (50% of max)
+  </Step>
+  
+  <Step title="Tire Match Bonus">
+    - Track on clay/wet_clay: **20 pts** (maximum)
+    - Reinforced tires on rocky: **18 pts**
+    - Standard on loam/sandy: **16 pts**
+  </Step>
+  
+  <Step title="Difficulty Penalty">
+    If soil difficulty >70 and tractor is NOT track:
+    ```
+    score × 0.7  (30% penalty)
+    ```
+  </Step>
+</Steps>
+
+**Example:**
+
+Standard 4x4 tractor on clay soil:
+```
+soil_difficulty = 70
+base_score = 10
+// No track bonus
+// Difficulty penalty applies
+final_score = 10 × 0.7 = 7.0 pts
+```
+
+Track tractor on clay soil:
+```
+score = 20 pts (maximum, perfect match)
+```
+
+---
+
+### 4. Economic Score (15 points)
+
+Prefers tractors with adequate but not excessive power (lower operating costs).
+
+**Logic:**
+
+```javascript
+if (tractor has fuel_consumption_lph data) {
+  // Lower consumption = higher score
+  normalized = 1 - ((consumption - 5) / 20)
+  score = normalized × 15
+} else {
+  // Use power as proxy
+  efficiency_ratio = requiredPower / tractorPower
+  score = efficiency_ratio × 15
+}
+```
+
+**Example:**
+
+Required: 100 HP
+- Tractor A: 110 HP → ratio = 100/110 = 0.909 → **13.6 pts**
+- Tractor B: 150 HP → ratio = 100/150 = 0.667 → **10.0 pts**
+
+Tractor A scores higher (more economical for the task).
+
+---
+
+### 5. Availability Score (10 points)
+
+Simple status-based scoring:
+
+| Status | Score | Description |
+|--------|-------|-------------|
+| `available` / `active` | 10 pts | Ready to use |
+| `in_use` / `maintenance` | 5 pts | Limited availability |
+| `unavailable` / `inactive` | 0 pts | Cannot use |
+
+---
+
+## Filtering Process
+
+Before scoring, tractors pass through **cascading filters**:
+
+<Steps>
+  <Step title="Power Filter">
+    ```javascript
+    if (tractorPower < requiredPower) {
+      REJECT  // Insufficient power
+    }
+    ```
+  </Step>
+  
+  <Step title="Traction Filter (Critical)">
+    ```javascript
+    if (slope > 15% && traction !== '4x4' && traction !== 'track') {
+      REJECT  // Safety rule: 4WD mandatory on steep slopes
+    }
+    ```
+  </Step>
+  
+  <Step title="Availability Filter">
+    ```javascript
+    if (status !== 'available' && status !== 'active') {
+      REJECT (optional)  // Can be disabled via includeUnavailable flag
+    }
+    ```
+  </Step>
+  
+  <Step title="Score & Rank">
+    Calculate total score (0-100) for remaining tractors and sort by score descending.
+  </Step>
+</Steps>
+
+---
+
+## Classification Labels
+
+Tractors are classified based on **power utilization percentage**:
+
+```javascript
+utilization = (requiredPower / tractorPower) × 100
+```
+
+| Utilization | Label | Description | Emoji |
+|-------------|-------|-------------|-------|
+| **≥85%** | OPTIMAL | Perfect power match | ✅ |
+| **70-84%** | GOOD | Good balance | 👍 |
+| **50-69%** | OVERPOWERED | Over-dimensioned | ⚠️ |
+| **&lt;50%** | EXCESSIVE | Wastefully over-sized | ❌ |
+
+---
+
+## API Endpoint
+
+### Generate Recommendations
+
+Generates top 5 ranked tractor recommendations.
+
+```http
+POST /api/recommendations/generate
+```
+
+**Authentication Required**: Bearer token (user must own the terrain)
+
+#### Request Body
+
+```json
+{
+  "terrain_id": 1,
+  "implement_id": 2,
+  "working_depth_m": 0.25,
+  "work_type": "tillage"
+}
+```
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `terrain_id` | integer | Yes | ID of the terrain (must belong to user) |
+| `implement_id` | integer | Yes | ID of the implement |
+| `working_depth_m` | number | No | Working depth override (m) |
+| `work_type` | string | No | Type: `tillage`, `planting`, `harvesting`, `transport`, `general` |
+
+#### Response
+
+```json
+{
+  "success": true,
+  "message": "Recomendaciones generadas exitosamente",
+  "data": {
+    "queryId": 105,
+    "implement": {
+      "id": 2,
+      "name": "Arado de discos",
+      "brand": "Baldan",
+      "type": "plow",
+      "power_requirement_hp": 80
+    },
+    "terrain": {
+      "id": 1,
+      "name": "Parcela Norte",
+      "soil_type": "clay",
+      "slope_percentage": 12,
+      "analysis": {
+        "classification": {
+          "slopeClass": "ROLLING",
+          "slopeDescription": "Pendiente moderada",
+          "soilLabel": "Difícil",
+          "preferredTire": "track"
+        },
+        "metrics": {
+          "soilDifficulty": 70,
+          "combinedDifficulty": 51.6
+        },
+        "requirements": {
+          "requires4WD": false,
+          "requiresTrack": false
+        }
+      }
+    },
+    "powerRequirement": {
+      "minimum_power_hp": 131.04,
+      "calculated_power_hp": 113.95,
+      "factors": {
+        "basePowerHP": 80,
+        "soilFactor": 1.3,
+        "slopeFactor": 1.06,
+        "depthFactor": 1.0,
+        "safetyMargin": 0.15
+      }
+    },
+    "recommendations": [
+      {
+        "rank": 1,
+        "tractor": {
+          "id": 8,
+          "name": "Massey Ferguson 6713",
+          "brand": "Massey Ferguson",
+          "model": "6713",
+          "engine_power_hp": 145,
+          "traction_type": "4x4",
+          "weight_kg": 5800
+        },
+        "score": {
+          "total": 82.5,
+          "breakdown": {
+            "efficiency": 26.8,
+            "traction": 20.3,
+            "soil": 14.0,
+            "economic": 13.5,
+            "availability": 10.0
+          },
+          "maxPossible": 100,
+          "percentageScore": 82.5
+        },
+        "compatibility": {
+          "requiredPower": 131.04,
+          "tractorPower": 145,
+          "surplusHP": 13.96,
+          "utilizationPercent": 90.37
+        },
+        "classification": {
+          "label": "OPTIMAL",
+          "description": "Ajuste óptimo",
+          "emoji": "✅"
+        },
+        "explanation": "Alta eficiencia energética (90% utilización). Ajuste óptimo de potencia."
+      },
+      {
+        "rank": 2,
+        "tractor": {
+          "id": 12,
+          "name": "John Deere 6155M",
+          "brand": "John Deere",
+          "model": "6155M",
+          "engine_power_hp": 155,
+          "traction_type": "4x4",
+          "weight_kg": 6200
+        },
+        "score": {
+          "total": 78.2,
+          "breakdown": {
+            "efficiency": 23.4,
+            "traction": 20.3,
+            "soil": 14.0,
+            "economic": 12.7,
+            "availability": 10.0
+          }
+        },
+        "compatibility": {
+          "requiredPower": 131.04,
+          "tractorPower": 155,
+          "surplusHP": 23.96,
+          "utilizationPercent": 84.54
+        },
+        "classification": {
+          "label": "GOOD",
+          "description": "Buen ajuste",
+          "emoji": "👍"
+        },
+        "explanation": "Buen balance potencia/necesidad. Tracción óptima para pendiente moderada."
+      }
+    ],
+    "summary": {
+      "totalEvaluated": 25,
+      "compatibleCount": 8,
+      "filteredOut": 17,
+      "persistedCount": 3,
+      "bestMatch": {
+        "tractor": {
+          "id": 8,
+          "name": "Massey Ferguson 6713",
+          "brand": "Massey Ferguson",
+          "model": "6713",
+          "engine_power_hp": 145
+        },
+        "score": 82.5,
+        "explanation": "Alta eficiencia energética (90% utilización). Ajuste óptimo de potencia."
+      }
+    }
+  }
+}
+```
+
+<Note>
+The API persists the **top 3 recommendations** to the database for historical tracking. All 5 are returned in the response.
+</Note>
+
+---
+
+### Error Responses
+
+**401 Unauthorized** - User not authenticated:
+```json
+{
+  "success": false,
+  "message": "Usuario no autenticado"
+}
+```
+
+**404 Not Found** - Terrain doesn't belong to user:
+```json
+{
+  "success": false,
+  "message": "Terreno no encontrado o no accesible"
+}
+```
+
+**404 Not Found** - No tractors available:
+```json
+{
+  "success": false,
+  "message": "No hay tractores disponibles en el sistema"
+}
+```
+
+**200 Success** - No compatible tractors:
+```json
+{
+  "success": true,
+  "message": "Cálculo realizado pero sin tractores compatibles",
+  "data": {
+    "recommendations": [],
+    "summary": {
+      "reason": "No hay tractores 4WD con potencia suficiente para pendiente > 15%"
+    }
+  }
+}
+```
+
+---
+
+## Real-World Example
+
+**Scenario:**
+- **Terrain**: Highland farm, 18% slope, clay soil
+- **Implement**: Heavy-duty chisel plow, 95 HP base requirement
+- **Required Power**: 156.7 HP (after soil/slope/depth/safety factors)
+
+**Available Tractors:**
+
+| ID | Model | Power | Traction | Status |
+|----|-------|-------|----------|--------|
+| 3 | Case IH Puma 185 | 185 HP | 4x4 | available |
+| 7 | New Holland T6.175 | 175 HP | 4x4 | available |
+| 11 | Massey Ferguson 7718 | 180 HP | 4x4 | in_use |
+| 15 | John Deere 6145M | 145 HP | 4x2 | available |
+| 22 | Valtra N174 | 174 HP | 4x4 | available |
+
+**Filtering Phase:**
+
+<Steps>
+  <Step title="Power Filter">
+    - John Deere 6145M (145 HP): **REJECTED** - Insufficient power (145 < 156.7)
+    - All others: **PASS**
+  </Step>
+  
+  <Step title="Traction Filter (Critical)">
+    Slope = 18% (STEEP) → **4WD MANDATORY**
+    - John Deere 6145M: Would be rejected here too (4x2)
+    - All others: **PASS** (all are 4x4)
+  </Step>
+  
+  <Step title="Availability Filter">
+    - Massey Ferguson 7718: Reduced score (in_use = 5 pts instead of 10)
+    - Others: Full availability score
+  </Step>
+</Steps>
+
+**Scoring Phase:**
+
+**Tractor 1: New Holland T6.175 (175 HP, 4x4)**
+
+```javascript
+// Efficiency (30 pts max)
+ratio = 175 / 156.7 = 1.117
+utilization = 89.5%
+efficiency_score = 30 - ((1.117 - 1.0) / 0.3) × 15 = 24.2 pts
+
+// Traction (25 pts max)
+slope_class = 'STEEP'
+bonus = TRACTION_BONUS['4x4']['steep'] = +25
+traction_score = ((25 + 50) / 80) × 25 = 23.4 pts
+
+// Soil (20 pts max)
+soil = 'clay' (difficulty=70, preferred='track')
+tractor is NOT track → penalty
+soil_score = 10 × 0.7 = 7.0 pts
+
+// Economic (15 pts max)
+economic_ratio = 156.7 / 175 = 0.895
+economic_score = 0.895 × 15 = 13.4 pts
+
+// Availability (10 pts max)
+status = 'available'
+availability_score = 10.0 pts
+
+// TOTAL
+total_score = 24.2 + 23.4 + 7.0 + 13.4 + 10.0 = 78.0 pts
+```
+
+**Tractor 2: Valtra N174 (174 HP, 4x4)**
+
+```javascript
+// Similar calculations...
+total_score = 77.8 pts
+```
+
+**Tractor 3: Case IH Puma 185 (185 HP, 4x4)**
+
+```javascript
+// Efficiency penalty for higher power
+ratio = 185 / 156.7 = 1.180
+efficiency_score = 21.0 pts
+
+// Other scores similar to Tractor 1
+total_score = 74.8 pts
+```
+
+**Final Ranking:**
+
+1. 🥇 **New Holland T6.175** - 78.0 pts (OPTIMAL, 89.5% utilization)
+2. 🥈 **Valtra N174** - 77.8 pts (OPTIMAL, 90.1% utilization)
+3. 🥉 **Case IH Puma 185** - 74.8 pts (GOOD, 84.7% utilization)
+4. **Massey Ferguson 7718** - 69.2 pts (availability penalty)
+
+**Winner Explanation:**
+
+> "Alta eficiencia energética (89.5% utilización). Tracción óptima para pendiente pronunciada. Buen balance potencia/necesidad."
+
+---
+
+## Recommendation History
+
+### Get History
+
+```http
+GET /api/recommendations/history?page=1&limit=10&work_type=tillage
+```
+
+**Authentication Required**: Bearer token
+
+#### Query Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `page` | integer | 1 | Page number |
+| `limit` | integer | 10 | Records per page (max: 50) |
+| `work_type` | string | - | Filter: `tillage`, `planting`, `harvesting`, `transport`, `general` |
+
+#### Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "recommendations": [
+      {
+        "id": 15,
+        "score": 82.5,
+        "work_type": "tillage",
+        "date": "2026-03-10T16:45:00Z",
+        "terrain": {
+          "id": 1,
+          "name": "Parcela Norte",
+          "soil_type": "clay",
+          "slope_percentage": 12
+        },
+        "tractor": {
+          "id": 8,
+          "name": "Massey Ferguson 6713",
+          "brand": "Massey Ferguson",
+          "model": "6713",
+          "engine_power_hp": 145
+        },
+        "implement": {
+          "id": 2,
+          "name": "Arado de discos",
+          "type": "plow"
+        },
+        "details": {
+          "rank": 1,
+          "score": {
+            "total": 82.5,
+            "breakdown": {
+              "efficiency": 26.8,
+              "traction": 20.3,
+              "soil": 14.0,
+              "economic": 13.5,
+              "availability": 10.0
+            }
+          },
+          "explanation": "Alta eficiencia energética (90% utilización). Ajuste óptimo de potencia."
+        }
+      }
+    ],
+    "pagination": {
+      "currentPage": 1,
+      "totalPages": 3,
+      "totalItems": 28,
+      "itemsPerPage": 10,
+      "hasNextPage": true,
+      "hasPrevPage": false
+    }
+  }
+}
+```
+
+---
+
+### Get Recommendation by ID
+
+```http
+GET /api/recommendations/:id
+```
+
+**Authentication Required**: Bearer token (must own the recommendation)
+
+#### Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": 15,
+    "score": 82.5,
+    "work_type": "tillage",
+    "date": "2026-03-10T16:45:00Z",
+    "terrain": {
+      "id": 1,
+      "name": "Parcela Norte",
+      "soil_type": "clay",
+      "slope_percentage": 12
+    },
+    "tractor": {
+      "id": 8,
+      "name": "Massey Ferguson 6713",
+      "brand": "Massey Ferguson",
+      "model": "6713",
+      "engine_power_hp": 145
+    },
+    "implement": {
+      "id": 2,
+      "name": "Arado de discos",
+      "type": "plow",
+      "power_requirement_hp": 80
+    },
+    "details": {
+      "rank": 1,
+      "score": {
+        "total": 82.5,
+        "breakdown": {
+          "efficiency": 26.8,
+          "traction": 20.3,
+          "soil": 14.0,
+          "economic": 13.5,
+          "availability": 10.0
+        }
+      },
+      "compatibility": {
+        "requiredPower": 131.04,
+        "tractorPower": 145,
+        "surplusHP": 13.96,
+        "utilizationPercent": 90.37
+      },
+      "classification": {
+        "label": "OPTIMAL",
+        "description": "Ajuste óptimo"
+      },
+      "explanation": "Alta eficiencia energética (90% utilización). Ajuste óptimo de potencia.",
+      "powerRequirement": {
+        "minimum_hp": 131.04,
+        "factors": {
+          "basePowerHP": 80,
+          "soilFactor": 1.3,
+          "slopeFactor": 1.06,
+          "depthFactor": 1.0,
+          "safetyMargin": 0.15
+        }
+      }
+    }
+  }
+}
+```
+
+---
+
+## Code Reference
+
+The recommendation engine is implemented across multiple files:
+
+- **Controller**: `src/controllers/recommendationController.js:141` (generateRecommendation)
+- **Service**: `src/services/recommendationService.js:542` (generateRecommendation)
+- **Scoring**: `src/services/recommendationService.js:480` (calculateScore)
+- **Terrain Analysis**: `src/services/recommendationService.js:157` (analyzeTerrain)
+- **Model**: `src/models/Recommendation.js`
+- **Routes**: `src/routes/recommendation.routes.js:139`
+
+**Key Algorithm Functions:**
+
+```javascript
+// Main recommendation flow
+generateRecommendation({
+  terrain: { slope_percentage: 12, soil_type: 'clay' },
+  implement: { power_requirement_hp: 80, working_depth_m: 0.25 },
+  tractors: tractorsList,
+  requiredPower: 131.04,
+  options: { limit: 5 }
+});
+
+// Individual scoring components
+calculateEfficiencyScore(tractorPower, requiredPower);  // 0-30 pts
+calculateTractionScore(tractor, terrainAnalysis);       // 0-25 pts
+calculateSoilCompatibilityScore(tractor, terrain);      // 0-20 pts
+calculateEconomicScore(tractor, requiredPower);         // 0-15 pts
+calculateAvailabilityScore(tractor);                    // 0-10 pts
+```
+
+**Traction Bonus Configuration** (`src/services/recommendationService.js:91`):
+
+```javascript
+const TRACTION_BONUS = {
+  '4x4': { flat: 5, rolling: 15, steep: 25 },
+  'track': { flat: 0, rolling: 20, steep: 30 },
+  '4x2': { flat: 10, rolling: 0, steep: -50 }
+};
+```
+
+---
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Always validate terrain ownership">
+    The API automatically checks that `terrain_id` belongs to the authenticated user. This prevents unauthorized access to other users' data.
+  </Accordion>
+  
+  <Accordion title="Trust the 4WD rule">
+    The algorithm **automatically rejects** 2WD tractors for slopes &gt;15%. This is a safety rule based on agricultural engineering standards.
+  </Accordion>
+  
+  <Accordion title="Consider the top 3, not just #1">
+    The top 3 recommendations are often very close in score. Consider operational factors (availability, location, cost) when making the final decision.
+  </Accordion>
+  
+  <Accordion title="Update tractor availability">
+    Keep tractor `status` fields updated for accurate availability scoring.
+  </Accordion>
+  
+  <Accordion title="Use work_type for better tracking">
+    Specify `work_type` (tillage, planting, etc.) to enable better historical analysis and filtering.
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Related Topics
+
+<CardGroup cols={2}>
+  <Card title="Power Loss Calculations" icon="calculator" href="/features/calculations">
+    Physics-based power loss analysis
+  </Card>
+  <Card title="Terrains API" icon="mountain" href="/api-reference/terrains">
+    Manage terrain profiles
+  </Card>
+  <Card title="Tractors API" icon="tractor" href="/api-reference/tractors">
+    Tractor catalog operations
+  </Card>
+  <Card title="Implements API" icon="wrench" href="/api-reference/implements">
+    Agricultural implement management
+  </Card>
+</CardGroup>

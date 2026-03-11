@@ -1,0 +1,468 @@
+---
+title: 'Get Implement'
+description: 'Retrieve a specific implement by ID, get available implements, or search with advanced filters'
+---
+
+# Get Implement
+
+Retrieve agricultural implement information using different methods: by ID, available only, or with search filters.
+
+## Get by ID
+
+Retrieve detailed information about a specific implement.
+
+### Endpoint
+
+```
+GET /api/implements/{id}
+```
+
+### Path Parameters
+
+<ParamField path="id" type="integer" required>
+  The unique identifier of the implement
+</ParamField>
+
+### Response
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  The implement object (see schema below)
+</ResponseField>
+
+### Examples
+
+<CodeGroup>
+```bash cURL
+curl -X GET "http://localhost:4000/api/implements/1" \
+  -H "Content-Type: application/json"
+```
+
+```javascript JavaScript
+const implementId = 1;
+
+const response = await fetch(`http://localhost:4000/api/implements/${implementId}`, {
+  method: 'GET',
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
+const data = await response.json();
+console.log(data.data); // Implement object
+```
+
+```python Python
+import requests
+
+implement_id = 1
+
+response = requests.get(
+    f'http://localhost:4000/api/implements/{implement_id}'
+)
+
+implement = response.json()['data']
+print(f"Implement: {implement['implement_name']}")
+```
+</CodeGroup>
+
+### Response Example (200 OK)
+
+```json
+{
+  "success": true,
+  "data": {
+    "implement_id": 1,
+    "implement_name": "3-body disc plow",
+    "brand": "Baldan",
+    "power_requirement_hp": 50,
+    "working_width_m": 0.9,
+    "soil_type": "Loam",
+    "working_depth_cm": 25,
+    "weight_kg": 320,
+    "implement_type": "plow",
+    "status": "available",
+    "registration_date": "2026-01-15T10:00:00.000Z"
+  }
+}
+```
+
+### Error Responses
+
+#### Invalid ID (400)
+
+```json
+{
+  "success": false,
+  "message": "ID de implemento inválido"
+}
+```
+
+#### Not Found (404)
+
+```json
+{
+  "success": false,
+  "message": "Implemento no encontrado"
+}
+```
+
+---
+
+## Available Implements
+
+Retrieve only implements with `status: available`, sorted by type and power requirement.
+
+### Endpoint
+
+```
+GET /api/implements/available
+```
+
+### Query Parameters
+
+<ParamField query="limit" type="integer" default="10">
+  Number of records per page
+</ParamField>
+
+<ParamField query="offset" type="integer" default="0">
+  Number of records to skip
+</ParamField>
+
+<ParamField query="page" type="integer" default="1">
+  Page number (alternative to offset)
+</ParamField>
+
+### Examples
+
+<CodeGroup>
+```bash cURL
+curl -X GET "http://localhost:4000/api/implements/available?limit=10&page=1" \
+  -H "Content-Type: application/json"
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:4000/api/implements/available?limit=10&page=1', {
+  method: 'GET',
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
+const data = await response.json();
+console.log(`Found ${data.data.length} available implements`);
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    'http://localhost:4000/api/implements/available',
+    params={'limit': 10, 'page': 1}
+)
+
+available = response.json()['data']
+for implement in available:
+    print(f"{implement['implement_name']} - {implement['brand']}")
+```
+</CodeGroup>
+
+### Response Example (200 OK)
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "implement_id": 2,
+      "implement_name": "20-disc harrow",
+      "brand": "Tatu",
+      "power_requirement_hp": 35,
+      "working_width_m": 1.8,
+      "soil_type": "All",
+      "working_depth_cm": 15,
+      "weight_kg": 280,
+      "implement_type": "harrow",
+      "status": "available",
+      "registration_date": "2026-01-20T14:30:00.000Z"
+    },
+    {
+      "implement_id": 1,
+      "implement_name": "3-body disc plow",
+      "brand": "Baldan",
+      "power_requirement_hp": 50,
+      "working_width_m": 0.9,
+      "soil_type": "Loam",
+      "working_depth_cm": 25,
+      "weight_kg": 320,
+      "implement_type": "plow",
+      "status": "available",
+      "registration_date": "2026-01-15T10:00:00.000Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "total": 12,
+    "totalPages": 2
+  }
+}
+```
+
+<Note>
+Results are automatically sorted by `implement_type` and then by `power_requirement_hp`.
+</Note>
+
+---
+
+## Search Implements
+
+Search implements with advanced filters for type, soil compatibility, and power requirements.
+
+### Endpoint
+
+```
+GET /api/implements/search
+```
+
+### Query Parameters
+
+<ParamField query="type" type="string">
+  Filter by implement type (exact match, case-insensitive). Valid values:
+  - `plow`
+  - `harrow`
+  - `seeder`
+  - `sprayer`
+  - `harvester`
+  - `cultivator`
+  - `mower`
+  - `trailer`
+  - `other`
+</ParamField>
+
+<ParamField query="soilType" type="string">
+  Filter by compatible soil type (partial match, case-insensitive)
+  
+  Example values: `Loam`, `Clay`, `Sandy`, `All`
+</ParamField>
+
+<ParamField query="maxPower" type="number">
+  Filter by maximum power requirement in HP
+  
+  Returns only implements requiring ≤ this power
+</ParamField>
+
+<ParamField query="search" type="string">
+  General search across implement name and brand (partial match)
+</ParamField>
+
+<ParamField query="brand" type="string">
+  Filter by exact brand name (case-insensitive)
+</ParamField>
+
+<ParamField query="limit" type="integer" default="10">
+  Number of records per page
+</ParamField>
+
+<ParamField query="offset" type="integer" default="0">
+  Number of records to skip
+</ParamField>
+
+<ParamField query="page" type="integer" default="1">
+  Page number
+</ParamField>
+
+### Examples
+
+#### Search by Type and Soil
+
+<CodeGroup>
+```bash cURL
+curl -X GET "http://localhost:4000/api/implements/search?type=plow&soilType=Loam" \
+  -H "Content-Type: application/json"
+```
+
+```javascript JavaScript
+const params = new URLSearchParams({
+  type: 'plow',
+  soilType: 'Loam'
+});
+
+const response = await fetch(`http://localhost:4000/api/implements/search?${params}`, {
+  method: 'GET',
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
+const data = await response.json();
+console.log(`Found ${data.pagination.total} matching implements`);
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    'http://localhost:4000/api/implements/search',
+    params={
+        'type': 'plow',
+        'soilType': 'Loam'
+    }
+)
+
+results = response.json()
+print(f"Found {results['pagination']['total']} plows for Loam soil")
+```
+</CodeGroup>
+
+#### Search by Power Requirement
+
+Find implements that require 60 HP or less:
+
+<CodeGroup>
+```bash cURL
+curl -X GET "http://localhost:4000/api/implements/search?maxPower=60" \
+  -H "Content-Type: application/json"
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:4000/api/implements/search?maxPower=60', {
+  method: 'GET'
+});
+
+const data = await response.json();
+data.data.forEach(impl => {
+  console.log(`${impl.implement_name}: ${impl.power_requirement_hp} HP`);
+});
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    'http://localhost:4000/api/implements/search',
+    params={'maxPower': 60}
+)
+
+for implement in response.json()['data']:
+    print(f"{implement['implement_name']}: {implement['power_requirement_hp']} HP")
+```
+</CodeGroup>
+
+#### Combined Search
+
+Search for seeders compatible with clay soil requiring max 50 HP:
+
+```bash
+curl -X GET "http://localhost:4000/api/implements/search?type=seeder&soilType=clay&maxPower=50"
+```
+
+### Response Example (200 OK)
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "implement_id": 1,
+      "implement_name": "3-body disc plow",
+      "brand": "Baldan",
+      "power_requirement_hp": 50,
+      "working_width_m": 0.9,
+      "soil_type": "Loam",
+      "working_depth_cm": 25,
+      "weight_kg": 320,
+      "implement_type": "plow",
+      "status": "available",
+      "registration_date": "2026-01-15T10:00:00.000Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "total": 1,
+    "totalPages": 1
+  },
+  "filters": {
+    "search": null,
+    "brand": null,
+    "type": "plow",
+    "soilType": "Loam",
+    "maxPower": 50
+  }
+}
+```
+
+<Info>
+The `filters` object in the response shows which filters were applied to the search.
+</Info>
+
+## Implement Types Reference
+
+The following implement types are available in the system:
+
+| Type | Description | Typical Use |
+|------|-------------|-------------|
+| `plow` | Disc or moldboard plows | Primary soil tillage, breaking ground |
+| `harrow` | Disc or tine harrows | Secondary tillage, soil smoothing |
+| `seeder` | Seed planting equipment | Sowing seeds in rows or broadcast |
+| `sprayer` | Pesticide/fertilizer sprayers | Applying chemicals or nutrients |
+| `harvester` | Harvesting equipment | Crop collection and processing |
+| `cultivator` | Soil cultivation tools | Weed control, soil aeration |
+| `mower` | Mowing equipment | Cutting grass, hay, or crop residue |
+| `trailer` | Agricultural trailers | Transport of crops and materials |
+| `other` | Other agricultural implements | Miscellaneous equipment |
+
+## Soil Type Compatibility
+
+Common soil type values:
+
+- **Loam**: Balanced mixture of sand, silt, and clay
+- **Clay**: Heavy, moisture-retaining soil
+- **Sandy**: Light, well-draining soil
+- **Silty**: Fine-textured, fertile soil
+- **All**: Compatible with all soil types
+
+<Note>
+Soil type filtering uses partial matching, so searching for "clay" will also match "Heavy clay" or "Clay loam".
+</Note>
+
+## Implementation Notes
+
+### Get by ID
+- **Source**: `src/routes/implement.routes.js:273`
+- **Controller**: `src/controllers/implementController.js:47` - `getImplementById`
+- **Model**: `src/models/Implement.js:12` - `findById(id)`
+- **Public Access**: No authentication required
+
+### Available Implements
+- **Source**: `src/routes/implement.routes.js:133`
+- **Controller**: `src/controllers/implementController.js:139` - `getAvailableImplements`
+- **Model**: `src/models/Implement.js:115` - `getAvailable()`
+- **SQL**: `SELECT * FROM implement WHERE status = 'available' ORDER BY implement_type, power_requirement_hp`
+
+### Search Implements
+- **Source**: `src/routes/implement.routes.js:218`
+- **Controller**: `src/controllers/implementController.js:72` - `searchImplements`
+- **Filtering**: In-memory filtering after fetching all implements
+- **Case-Insensitive**: All text filters are case-insensitive
+
+## Related Endpoints
+
+<CardGroup cols={2}>
+  <Card title="List All Implements" icon="list" href="/api-reference/implements/list">
+    Get a paginated list of all implements
+  </Card>
+  <Card title="Create Implement" icon="plus" href="/api-reference/implements/create">
+    Add a new implement (Admin only)
+  </Card>
+  <Card title="Update Implement" icon="pen" href="/api-reference/implements/update">
+    Modify an existing implement (Admin only)
+  </Card>
+  <Card title="Delete Implement" icon="trash" href="/api-reference/implements/delete">
+    Remove an implement (Admin only)
+  </Card>
+</CardGroup>

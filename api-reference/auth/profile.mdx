@@ -1,0 +1,340 @@
+---
+title: 'User Profile'
+api: 'GET /api/auth/profile'
+description: 'Get or update the authenticated user profile'
+---
+
+## Get Profile
+
+<Note>
+  This endpoint requires authentication. Include the JWT token in the Authorization header.
+</Note>
+
+### GET /api/auth/profile
+
+Returns the complete profile data of the authenticated user (without password).
+
+#### Authentication
+
+**Required:** Bearer token in Authorization header
+
+```bash
+Authorization: Bearer {your_jwt_token}
+```
+
+#### Response
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Human-readable response message
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  Response data containing user profile
+  
+  <Expandable title="data properties">
+    <ResponseField name="user" type="object">
+      Complete user profile information
+      
+      <Expandable title="user properties">
+        <ResponseField name="user_id" type="integer">
+          Unique user identifier
+        </ResponseField>
+        
+        <ResponseField name="name" type="string">
+          User's full name
+        </ResponseField>
+        
+        <ResponseField name="email" type="string">
+          User's email address
+        </ResponseField>
+        
+        <ResponseField name="role_id" type="integer">
+          User's role identifier
+        </ResponseField>
+        
+        <ResponseField name="role_name" type="string">
+          User's role name (e.g., "admin", "user")
+        </ResponseField>
+        
+        <ResponseField name="status" type="string">
+          User account status (e.g., "active", "inactive", "suspended")
+        </ResponseField>
+        
+        <ResponseField name="registration_date" type="string">
+          ISO 8601 timestamp of registration
+        </ResponseField>
+        
+        <ResponseField name="last_session" type="string">
+          ISO 8601 timestamp of last login
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+#### Example Request
+
+```bash cURL
+curl -X GET https://api.maqagr.com/api/auth/profile \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIs..."
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.maqagr.com/api/auth/profile', {
+  headers: {
+    'Authorization': `Bearer ${token}`
+  }
+});
+
+const data = await response.json();
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    'https://api.maqagr.com/api/auth/profile',
+    headers={'Authorization': f'Bearer {token}'}
+)
+
+data = response.json()
+```
+
+#### Success Response (200)
+
+```json
+{
+  "success": true,
+  "message": "Perfil obtenido exitosamente",
+  "data": {
+    "user": {
+      "user_id": 1,
+      "name": "Juan Pérez",
+      "email": "juan@example.com",
+      "role_id": 2,
+      "role_name": "user",
+      "status": "active",
+      "registration_date": "2026-02-13T10:00:00.000Z",
+      "last_session": "2026-03-11T08:30:00.000Z"
+    }
+  }
+}
+```
+
+#### Error Responses
+
+**401 - Unauthorized (No Token)**
+
+```json
+{
+  "success": false,
+  "message": "Token no proporcionado o inválido"
+}
+```
+
+**404 - User Not Found**
+
+```json
+{
+  "success": false,
+  "message": "Usuario no encontrado"
+}
+```
+
+---
+
+## Update Profile
+
+<Note>
+  This endpoint requires authentication. Include the JWT token in the Authorization header.
+</Note>
+
+### PUT /api/auth/profile
+
+Allows updating the name and/or email of the authenticated user. Does not allow changing role or status. At least one field must be provided. If updating email, it verifies that it's not in use by another user.
+
+#### Authentication
+
+**Required:** Bearer token in Authorization header
+
+```bash
+Authorization: Bearer {your_jwt_token}
+```
+
+#### Request Body
+
+<ParamField path="name" type="string">
+  User's new full name (optional if email is provided)
+</ParamField>
+
+<ParamField path="email" type="string">
+  User's new email address (optional if name is provided, must be valid format)
+</ParamField>
+
+<Note>
+  At least one field (name or email) must be provided
+</Note>
+
+#### Response
+
+<ResponseField name="success" type="boolean">
+  Indicates if the request was successful
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Human-readable response message
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  Response data containing updated user profile
+  
+  <Expandable title="data properties">
+    <ResponseField name="user" type="object">
+      Updated user profile information
+      
+      <Expandable title="user properties">
+        <ResponseField name="user_id" type="integer">
+          Unique user identifier
+        </ResponseField>
+        
+        <ResponseField name="name" type="string">
+          User's updated full name
+        </ResponseField>
+        
+        <ResponseField name="email" type="string">
+          User's updated email address
+        </ResponseField>
+        
+        <ResponseField name="role_id" type="integer">
+          User's role identifier
+        </ResponseField>
+        
+        <ResponseField name="status" type="string">
+          User account status
+        </ResponseField>
+        
+        <ResponseField name="registration_date" type="string">
+          ISO 8601 timestamp of registration
+        </ResponseField>
+        
+        <ResponseField name="last_session" type="string">
+          ISO 8601 timestamp of last login
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+#### Example Request
+
+```bash cURL
+curl -X PUT https://api.maqagr.com/api/auth/profile \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIs..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Juan Pérez Actualizado",
+    "email": "nuevo@example.com"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.maqagr.com/api/auth/profile', {
+  method: 'PUT',
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    name: 'Juan Pérez Actualizado',
+    email: 'nuevo@example.com'
+  })
+});
+
+const data = await response.json();
+```
+
+```python Python
+import requests
+
+response = requests.put(
+    'https://api.maqagr.com/api/auth/profile',
+    headers={'Authorization': f'Bearer {token}'},
+    json={
+        'name': 'Juan Pérez Actualizado',
+        'email': 'nuevo@example.com'
+    }
+)
+
+data = response.json()
+```
+
+#### Success Response (200)
+
+```json
+{
+  "success": true,
+  "message": "Perfil actualizado exitosamente",
+  "data": {
+    "user": {
+      "user_id": 1,
+      "name": "Juan Pérez Actualizado",
+      "email": "nuevo@example.com",
+      "role_id": 2,
+      "status": "active",
+      "registration_date": "2026-02-13T10:00:00.000Z",
+      "last_session": "2026-03-11T08:30:00.000Z"
+    }
+  }
+}
+```
+
+#### Error Responses
+
+**400 - No Fields Provided**
+
+```json
+{
+  "success": false,
+  "message": "Debe proporcionar al menos nombre o email para actualizar"
+}
+```
+
+**400 - Invalid Email Format**
+
+```json
+{
+  "success": false,
+  "message": "Formato de email inválido"
+}
+```
+
+**401 - Unauthorized**
+
+```json
+{
+  "success": false,
+  "message": "Token no proporcionado o inválido"
+}
+```
+
+**409 - Email Already in Use**
+
+```json
+{
+  "success": false,
+  "message": "El email ya está en uso por otro usuario"
+}
+```
+
+**500 - Internal Server Error**
+
+```json
+{
+  "success": false,
+  "message": "Error interno del servidor"
+}
+```

@@ -1,0 +1,647 @@
+---
+title: Authentication
+description: Learn how to authenticate with the MaqAgr API using JWT tokens
+---
+
+# Authentication
+
+MaqAgr API uses **JSON Web Tokens (JWT)** for secure authentication. All protected endpoints require a valid Bearer token in the request header.
+
+## Authentication Flow
+
+The authentication process follows these steps:
+
+<Steps>
+  <Step title="User Registration or Login">
+    Users authenticate via `/api/auth/register` or `/api/auth/login` endpoints.
+  </Step>
+  
+  <Step title="Receive JWT Token">
+    Upon successful authentication, the API returns a JWT token valid for **24 hours**.
+  </Step>
+  
+  <Step title="Include Token in Requests">
+    Send the token in the `Authorization` header with the `Bearer` scheme for all protected endpoints.
+  </Step>
+  
+  <Step title="Token Validation">
+    The API validates the token on each request using the `verifyTokenMiddleware`.
+  </Step>
+</Steps>
+
+## Registration
+
+Create a new user account to receive an authentication token.
+
+### Endpoint
+
+```
+POST /api/auth/register
+```
+
+### Request Body
+
+<ParamField body="name" type="string" required>
+  Full name of the user
+</ParamField>
+
+<ParamField body="email" type="string" required>
+  Valid email address (must be unique)
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  Strong password meeting security requirements:
+  - Minimum 8 characters
+  - At least one uppercase letter
+  - At least one lowercase letter
+  - At least one number
+  - At least one special character
+</ParamField>
+
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X POST http://localhost:4000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Juan Pérez",
+    "email": "juan@example.com",
+    "password": "SecurePass123!"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:4000/api/auth/register', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    name: 'Juan Pérez',
+    email: 'juan@example.com',
+    password: 'SecurePass123!'
+  })
+});
+
+const data = await response.json();
+console.log(data.data.token); // Save this token
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    'http://localhost:4000/api/auth/register',
+    json={
+        'name': 'Juan Pérez',
+        'email': 'juan@example.com',
+        'password': 'SecurePass123!'
+    }
+)
+
+data = response.json()
+token = data['data']['token']  # Save this token
+```
+</CodeGroup>
+
+### Response (201 Created)
+
+```json
+{
+  "success": true,
+  "message": "Usuario registrado exitosamente",
+  "data": {
+    "user": {
+      "user_id": 1,
+      "name": "Juan Pérez",
+      "email": "juan@example.com",
+      "role_id": 2,
+      "status": "active",
+      "registration_date": "2026-03-11T10:00:00.000Z"
+    },
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJlbWFpbCI6Imp1YW5AZXhhbXBsZS5jb20iLCJyb2xlX2lkIjoyLCJuYW1lIjoiSnVhbiBQw6lyZXoiLCJpYXQiOjE3MTAxNTEyMDAsImV4cCI6MTcxMDIzNzYwMH0..."
+  }
+}
+```
+
+<Note>
+New users are automatically assigned `role_id: 2` (regular user). Only administrators can modify user roles.
+</Note>
+
+## Login
+
+Authenticate with existing credentials to receive a new token.
+
+### Endpoint
+
+```
+POST /api/auth/login
+```
+
+### Request Body
+
+<ParamField body="email" type="string" required>
+  Registered email address
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  User's password
+</ParamField>
+
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl -X POST http://localhost:4000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "juan@example.com",
+    "password": "SecurePass123!"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:4000/api/auth/login', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    email: 'juan@example.com',
+    password: 'SecurePass123!'
+  })
+});
+
+const data = await response.json();
+const token = data.data.token;
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    'http://localhost:4000/api/auth/login',
+    json={
+        'email': 'juan@example.com',
+        'password': 'SecurePass123!'
+    }
+)
+
+token = response.json()['data']['token']
+```
+</CodeGroup>
+
+### Response (200 OK)
+
+```json
+{
+  "success": true,
+  "message": "Inicio de sesión exitoso",
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "user": {
+      "name": "Juan Pérez",
+      "email": "juan@example.com",
+      "role_id": 2
+    }
+  }
+}
+```
+
+<Info>
+Successful login updates the user's `last_session` field in the database to track activity.
+</Info>
+
+## JWT Token Structure
+
+### Token Format
+
+JWT tokens consist of three Base64-encoded parts separated by dots:
+
+```
+header.payload.signature
+```
+
+Example:
+```
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJlbWFpbCI6Imp1YW5AZXhhbXBsZS5jb20iLCJyb2xlX2lkIjoyLCJuYW1lIjoiSnVhbiBQw6lyZXoiLCJpYXQiOjE3MTAxNTEyMDAsImV4cCI6MTcxMDIzNzYwMH0.xyz123...
+```
+
+### Token Payload
+
+The decoded payload contains:
+
+```json
+{
+  "user_id": 1,
+  "email": "juan@example.com",
+  "role_id": 2,
+  "name": "Juan Pérez",
+  "iat": 1710151200,
+  "exp": 1710237600
+}
+```
+
+<ParamField path="user_id" type="integer">
+  Unique user identifier
+</ParamField>
+
+<ParamField path="email" type="string">
+  User's email address (stored in lowercase)
+</ParamField>
+
+<ParamField path="role_id" type="integer">
+  User role: `1` = Admin, `2` = Regular User
+</ParamField>
+
+<ParamField path="name" type="string">
+  User's full name
+</ParamField>
+
+<ParamField path="iat" type="integer">
+  Issued at timestamp (Unix epoch)
+</ParamField>
+
+<ParamField path="exp" type="integer">
+  Expiration timestamp (Unix epoch, 24 hours after `iat`)
+</ParamField>
+
+### Token Configuration
+
+- **Algorithm**: HS256 (HMAC with SHA-256)
+- **Expiration**: 24 hours (configurable via `JWT_EXPIRES_IN` env variable)
+- **Secret**: Defined in `JWT_SECRET` environment variable
+
+<Warning>
+Never use the default development secret (`'clave_secreta_desarrollo'`) in production. Always set a strong, unique `JWT_SECRET` in your `.env` file.
+</Warning>
+
+## Using Bearer Tokens
+
+All protected endpoints require the token in the `Authorization` header using the Bearer scheme.
+
+### Header Format
+
+```http
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+### Example: Get User Profile
+
+<CodeGroup>
+```bash cURL
+curl -X GET http://localhost:4000/api/auth/profile \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+
+```javascript JavaScript
+const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...';
+
+const response = await fetch('http://localhost:4000/api/auth/profile', {
+  headers: {
+    'Authorization': `Bearer ${token}`
+  }
+});
+
+const profile = await response.json();
+```
+
+```python Python
+import requests
+
+token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+
+response = requests.get(
+    'http://localhost:4000/api/auth/profile',
+    headers={'Authorization': f'Bearer {token}'}
+)
+
+profile = response.json()
+```
+</CodeGroup>
+
+### Response (200 OK)
+
+```json
+{
+  "success": true,
+  "message": "Perfil obtenido exitosamente",
+  "data": {
+    "user": {
+      "user_id": 1,
+      "name": "Juan Pérez",
+      "email": "juan@example.com",
+      "role_id": 2,
+      "role_name": "Usuario",
+      "status": "active",
+      "registration_date": "2026-03-11T10:00:00.000Z",
+      "last_session": "2026-03-11T10:05:00.000Z"
+    }
+  }
+}
+```
+
+## Token Validation Middleware
+
+The API uses the `verifyTokenMiddleware` (defined in `src/middleware/auth.middleware.js`) to validate tokens:
+
+```javascript
+export const verifyTokenMiddleware = (req, res, next) => {
+  try {
+    // Extract Authorization header
+    const authHeader = req.headers['authorization'];
+    
+    if (!authHeader) {
+      return res.status(401).json({
+        success: false,
+        message: 'Token no proporcionado'
+      });
+    }
+    
+    // Extract token (format: Bearer <token>)
+    const token = authHeader.split(' ')[1];
+    
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: 'Formato de token inválido'
+      });
+    }
+    
+    // Verify and decode token
+    const decoded = verifyToken(token);
+    
+    // Attach user data to request
+    req.user = decoded;
+    
+    next();
+  } catch (error) {
+    return res.status(401).json({
+      success: false,
+      message: 'Token inválido o expirado'
+    });
+  }
+};
+```
+
+After successful validation, the decoded token payload is available in `req.user` for use in route handlers.
+
+## Protected Endpoints
+
+The following endpoints require authentication:
+
+### Authentication Endpoints
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|--------------|
+| `POST` | `/api/auth/register` | Register new user | No |
+| `POST` | `/api/auth/login` | Login and get token | No |
+| `POST` | `/api/auth/logout` | Logout (stateless) | **Yes** |
+| `GET` | `/api/auth/profile` | Get user profile | **Yes** |
+| `PUT` | `/api/auth/profile` | Update profile | **Yes** |
+| `PUT` | `/api/auth/password` | Change password | **Yes** |
+
+### Resource Endpoints
+
+All endpoints under these paths require authentication:
+
+- `/api/tractors` - Tractor management
+- `/api/implements` - Implement management
+- `/api/terrains` - Terrain management
+- `/api/calculations` - Power calculations
+- `/api/recommendations` - Tractor recommendations
+- `/api/admin` - Admin operations (requires `role_id: 1`)
+
+## Role-Based Access Control
+
+Some endpoints require specific roles:
+
+### Admin Middleware
+
+The `isAdmin` middleware restricts access to administrators only:
+
+```javascript
+export const isAdmin = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: 'No autenticado'
+    });
+  }
+  
+  if (req.user.role_id !== 1) {
+    return res.status(403).json({
+      success: false,
+      message: 'Acceso denegado: se requiere rol de administrador'
+    });
+  }
+  
+  next();
+};
+```
+
+### Role IDs
+
+- `role_id: 1` - **Administrator** (full access)
+- `role_id: 2` - **Regular User** (standard access)
+
+<Info>
+Admin-only endpoints include creating tractors (`POST /api/tractors`), managing users, and other administrative functions.
+</Info>
+
+## Error Responses
+
+### Missing Token
+
+```json
+{
+  "success": false,
+  "message": "Token no proporcionado"
+}
+```
+
+**HTTP Status**: 401 Unauthorized
+
+### Invalid Token Format
+
+```json
+{
+  "success": false,
+  "message": "Formato de token inválido"
+}
+```
+
+**HTTP Status**: 401 Unauthorized
+
+### Expired or Invalid Token
+
+```json
+{
+  "success": false,
+  "message": "Token inválido o expirado"
+}
+```
+
+**HTTP Status**: 401 Unauthorized
+
+<Note>
+Tokens expire after 24 hours. When your token expires, simply log in again to receive a fresh token.
+</Note>
+
+### Insufficient Permissions
+
+```json
+{
+  "success": false,
+  "message": "Acceso denegado: se requiere rol de administrador"
+}
+```
+
+**HTTP Status**: 403 Forbidden
+
+### Invalid Credentials (Login)
+
+```json
+{
+  "success": false,
+  "message": "Credenciales inválidas"
+}
+```
+
+**HTTP Status**: 401 Unauthorized
+
+### Inactive User
+
+```json
+{
+  "success": false,
+  "message": "Usuario inactivo o suspendido"
+}
+```
+
+**HTTP Status**: 401 Unauthorized
+
+<Warning>
+Users with `status` other than `'active'` cannot log in, even with correct credentials.
+</Warning>
+
+## Rate Limiting
+
+Authentication endpoints have rate limiting to prevent abuse:
+
+- **Login endpoint** (`/api/auth/login`): Stricter limits via `loginLimiter`
+- **Register endpoint** (`/api/auth/register`): Public limits via `publicLimiter`
+- **Protected endpoints**: General API limits via `apiLimiter`
+
+Rate limit headers are included in responses:
+
+```http
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 99
+X-RateLimit-Reset: 1710151800
+```
+
+## Security Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use HTTPS" icon="lock">
+    Always use HTTPS in production to encrypt tokens in transit
+  </Card>
+  <Card title="Secure Storage" icon="shield">
+    Store tokens securely (e.g., httpOnly cookies, secure storage)
+  </Card>
+  <Card title="Token Expiration" icon="clock">
+    Tokens expire after 24 hours - implement refresh logic in your client
+  </Card>
+  <Card title="Strong Secrets" icon="key">
+    Use a cryptographically strong `JWT_SECRET` (minimum 32 characters)
+  </Card>
+  <Card title="Password Hashing" icon="fingerprint">
+    Passwords are hashed with bcrypt (10 salt rounds) before storage
+  </Card>
+  <Card title="Input Sanitization" icon="shield-check">
+    All inputs are sanitized via `sanitizeInputs` middleware (XSS protection)
+  </Card>
+</CardGroup>
+
+## Logout
+
+Since JWT is stateless, logout is handled client-side.
+
+### Endpoint
+
+```
+POST /api/auth/logout
+```
+
+### Example Request
+
+```bash
+curl -X POST http://localhost:4000/api/auth/logout \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+
+### Response (200 OK)
+
+```json
+{
+  "success": true,
+  "message": "Sesión cerrada exitosamente",
+  "data": null
+}
+```
+
+<Note>
+The logout endpoint returns a confirmation message, but since JWT is stateless, you must delete the token on the client side to complete logout.
+</Note>
+
+## Password Management
+
+### Change Password
+
+Authenticated users can change their password:
+
+```
+PUT /api/auth/password
+```
+
+**Request Body:**
+
+```json
+{
+  "currentPassword": "SecurePass123!",
+  "newPassword": "NewSecurePass456!"
+}
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "success": true,
+  "message": "Contraseña actualizada exitosamente",
+  "data": null
+}
+```
+
+<Info>
+The new password must meet the same security requirements as registration. The current password is verified before allowing the change.
+</Info>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="API Reference" icon="book" href="/api-reference">
+    Explore all available API endpoints
+  </Card>
+  <Card title="Error Handling" icon="bug" href="/errors">
+    Learn about error responses and handling
+  </Card>
+  <Card title="Rate Limiting" icon="gauge" href="/rate-limiting">
+    Understand API rate limits and quotas
+  </Card>
+  <Card title="Examples" icon="code" href="/examples">
+    View practical authentication examples
+  </Card>
+</CardGroup>
