@@ -1,0 +1,151 @@
+{
+  "projectType": "api-service",
+  "projectName": "MaqAgr API",
+  "projectDescription": "Backend REST API para gestión integral de maquinaria agrícola con cálculos de potencia y recomendaciones inteligentes",
+  "theme": "sequoia",
+  "primaryColor": "#94cb04",
+  "lightColor": "#545454",
+  "darkColor": null,
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "authentication"
+            ]
+          },
+          {
+            "group": "Core Resources",
+            "pages": [
+              "resources/tractors",
+              "resources/implements",
+              "resources/terrains"
+            ]
+          },
+          {
+            "group": "Advanced Features",
+            "pages": [
+              "features/calculations",
+              "features/recommendations"
+            ]
+          },
+          {
+            "group": "Development",
+            "pages": [
+              "development/testing",
+              "development/utilities",
+              "development/error-handling",
+              "development/deployment"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Authentication",
+            "pages": [
+              "api-reference/auth/register",
+              "api-reference/auth/login",
+              "api-reference/auth/profile"
+            ]
+          },
+          {
+            "group": "Tractors",
+            "pages": [
+              "api-reference/tractors/list",
+              "api-reference/tractors/get",
+              "api-reference/tractors/create",
+              "api-reference/tractors/update",
+              "api-reference/tractors/delete"
+            ]
+          },
+          {
+            "group": "Implements",
+            "pages": [
+              "api-reference/implements/list",
+              "api-reference/implements/get",
+              "api-reference/implements/create",
+              "api-reference/implements/update",
+              "api-reference/implements/delete"
+            ]
+          },
+          {
+            "group": "Terrains",
+            "pages": [
+              "api-reference/terrains/list",
+              "api-reference/terrains/get",
+              "api-reference/terrains/create",
+              "api-reference/terrains/update",
+              "api-reference/terrains/delete"
+            ]
+          },
+          {
+            "group": "Calculations",
+            "pages": [
+              "api-reference/calculations/power-loss",
+              "api-reference/calculations/minimum-power"
+            ]
+          },
+          {
+            "group": "Recommendations",
+            "pages": [
+              "api-reference/recommendations/generate"
+            ]
+          },
+          {
+            "group": "Roles",
+            "pages": [
+              "api-reference/roles/list",
+              "api-reference/roles/get",
+              "api-reference/roles/create",
+              "api-reference/roles/update"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "JWT authentication with secure token management",
+    "Complete CRUD operations for tractors, implements, and terrains",
+    "Advanced power loss calculations based on agricultural physics",
+    "Intelligent tractor recommendation system",
+    "PostgreSQL database with optimized indexes",
+    "Redis caching for improved performance",
+    "Rate limiting and security middleware",
+    "Comprehensive OpenAPI/Swagger documentation",
+    "Extensive test coverage with Jest"
+  ],
+  "publicApiSurface": [
+    "POST /api/auth/register",
+    "POST /api/auth/login",
+    "GET /api/auth/profile",
+    "GET /api/tractors",
+    "GET /api/tractors/:id",
+    "POST /api/tractors",
+    "PUT /api/tractors/:id",
+    "DELETE /api/tractors/:id",
+    "GET /api/implements",
+    "GET /api/implements/:id",
+    "POST /api/implements",
+    "PUT /api/implements/:id",
+    "DELETE /api/implements/:id",
+    "GET /api/terrains",
+    "GET /api/terrains/:id",
+    "POST /api/terrains",
+    "PUT /api/terrains/:id",
+    "DELETE /api/terrains/:id",
+    "POST /api/calculations/power",
+    "POST /api/calculations/minimum-power",
+    "POST /api/recommendations",
+    "GET /api/roles",
+    "POST /api/roles"
+  ]
+}
